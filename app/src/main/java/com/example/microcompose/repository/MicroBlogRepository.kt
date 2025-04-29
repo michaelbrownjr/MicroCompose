@@ -1,7 +1,9 @@
 package com.example.microcompose.repository
 
+import android.util.Log
 import com.example.microcompose.network.MicroBlogApi
-import com.example.microcompose.network.VerifiedUser
+import com.example.microcompose.network.PostDto
+import com.example.microcompose.ui.data.VerifiedUser
 
 /**
  * Public surface that screens / view-models use.
@@ -16,14 +18,24 @@ class MicroBlogRepository(
     suspend fun sendSignInLink(email: String): Boolean =
         api.sendSignInLink(email)
 
-    suspend fun verifyTempToken(temp: String): VerifiedUser =
+    suspend fun verifyTempToken(temp: String): VerifiedUser? =
         api.verifyTempToken(temp)
 
     /* MicroBlogRepository.kt */
 
-    suspend fun firstPage()         = api.timeline()          // no before_id
-    suspend fun pageBefore(id: String) = api.timeline(id)     // older posts
-    suspend fun markRead(postId: String) = api.saveMarker(postId)
+    suspend fun firstPage(count: Int = 20): List<PostDto> {
+        Log.d("MicroBlogRepository", "firstPage")
+        return api.timeline(count = count)
+    }
+    suspend fun pageBefore(id: String, count: Int = 20): List<PostDto> {
+        // Log.d("MicroBlogRepo", "Fetching page before $id...") // Optional logging
+        return api.timeline(beforeId = id, count = count)
+    }
+    // New function to fetch posts newer than a given ID
+    suspend fun fetchNewerPosts(sinceId: String, count: Int = 20): List<PostDto> {
+        // Log.d("MicroBlogRepo", "Fetching posts since $sinceId...") // Optional logging
+        return api.timeline(sinceId = sinceId, count = count)
+    }
     suspend fun createPost(content: String) = api.postEntry(content)
 
 }

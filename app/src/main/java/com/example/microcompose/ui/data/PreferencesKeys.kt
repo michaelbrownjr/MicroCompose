@@ -1,15 +1,16 @@
+/* Path: app/src/main/java/com/example/microcompose/ui/data/PreferencesKeys.kt */
 package com.example.microcompose.ui.data
 
 import androidx.datastore.preferences.core.stringPreferencesKey
 
 /**
- * Central place for DataStore keys.
- * Keeping them in one file avoids typos and makes schema-changes easy.
+ * Defines the keys used for accessing values in DataStore.
  */
 object PreferencesKeys {
-    /** Long-lived Micro.blog app token (not the 15-minute e-mail token). */
+    // Existing keys (ensure these match your original file)
     val AUTH_TOKEN = stringPreferencesKey("auth_token")
+    val USERNAME = stringPreferencesKey("username")
 
-    /** Username is handy to show in UI after sign-in. */
-    val USERNAME   = stringPreferencesKey("username")
+    // Add this key if it's missing
+    val AVATAR_URL = stringPreferencesKey("avatar_url")
 }

@@ -5,11 +5,11 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class VerifiedUser(
-    val username: String,
-    @SerialName("full_name") // Maps JSON key "full_name" to this variable
-    val fullName: String,
-    val avatar: String,
-    val token: String, // This is the permanent auth token
+    val username: String? = null,
+    @SerialName("name") // Maps JSON key "full_name" to this variable
+    val fullName: String? = null,
+    val avatar: String? = null,
+    val token: String? = null, // This is the permanent auth token
     @SerialName("has_site")
     val hasSite: Boolean? = null, // Optional fields based on React Native code
     @SerialName("default_site")
