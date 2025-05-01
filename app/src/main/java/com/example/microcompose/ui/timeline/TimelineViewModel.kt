@@ -3,9 +3,10 @@ package com.example.microcompose.ui.timeline
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.microcompose.network.PostDto
 import com.example.microcompose.repository.MicroBlogRepository
 import com.example.microcompose.ui.data.UserPreferences // Import needed
+import com.example.microcompose.ui.mapping.toUI
+import com.example.microcompose.ui.model.PostUI
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -19,7 +20,7 @@ class TimelineViewModel(
     private val prefs: UserPreferences
 ) : ViewModel() {
 
-    private val _posts = MutableStateFlow<List<PostUi>>(emptyList())
+    private val _posts = MutableStateFlow<List<PostUI>>(emptyList())
     val posts = _posts.asStateFlow()
 
     // Expose avatar URL state (remains the same)
@@ -46,7 +47,7 @@ class TimelineViewModel(
         _isRefreshing.value = true
         paginationLoading = true
         try {
-            val page = repo.firstPage().map { it.toUi() }
+            val page = repo.firstPage().map { it.toUI() }
             _posts.value = page
             oldestId = page.lastOrNull()?.id
         } catch (e: Exception) {
@@ -77,7 +78,7 @@ class TimelineViewModel(
                 }
 
                 if (newPostsDto.isNotEmpty()) {
-                    val newPostsUi = newPostsDto.map { it.toUi() }
+                    val newPostsUi = newPostsDto.map { it.toUI() }
                     // Prepend new posts, ensuring no duplicates (IDs should be unique)
                     val existingIds = _posts.value.map { it.id }.toSet()
                     val uniqueNewPosts = newPostsUi.filterNot { existingIds.contains(it.id) }
@@ -108,7 +109,7 @@ class TimelineViewModel(
         if (paginationLoading || oldestId == null) return@launch
         paginationLoading = true
         try {
-            val older = repo.pageBefore(oldestId!!).map { it.toUi() }
+            val older = repo.pageBefore(oldestId!!).map { it.toUI() }
             if (older.isNotEmpty()) {
                 _posts.value = _posts.value + older
                 oldestId = older.last().id
@@ -126,23 +127,3 @@ class TimelineViewModel(
         // Navigation will be handled by observing the token Flow in MainActivity
     }
 }
-
-/* ---------- UI model ---------- */
-data class PostUi(
-    val id: String,
-    val author: String,
-    val avatar: String,
-    val html: String,
-    val datePublished: String,
-    val url: String
-)
-
-/* map from DTO */
-private fun PostDto.toUi() = PostUi(
-    id        = id,
-    author    = author.name.ifBlank { author.username },
-    avatar    = author.avatar,
-    html      = content_html,
-    datePublished = datePublished,
-    url = url
-)

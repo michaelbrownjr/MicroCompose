@@ -20,12 +20,20 @@ import kotlinx.serialization.json.Json
 
 // Define Data Transfer Objects (DTOs) matching the JSON structure
 
+// New DTO for the nested _microblog object within author
+@Serializable
+data class MicroblogAuthorDetailsDto(
+    val username: String = ""
+    // Add other fields from _microblog if needed
+)
+
 @Serializable
 data class AuthorDto(
     val name: String = "",
     val url: String = "",
     val avatar: String = "",
-    val username: String = ""
+    @SerialName("_microblog")
+    val microblog: MicroblogAuthorDetailsDto? = null
 )
 
 @Serializable
@@ -36,6 +44,7 @@ data class PostDto(
     @SerialName("date_published")
     val datePublished: String = "", // Store the full ISO 8601 date string
     val author: AuthorDto = AuthorDto(),
+    val username: AuthorDto = AuthorDto(),
     val content_text: String = ""
 )
 
@@ -166,7 +175,53 @@ object MicroBlogApi {
         }
     }
 
+    suspend fun getMentions(
+        count: Int = 20,
+        beforeId: String? = null
+    ): List<PostDto> {
+        require(count == null || beforeId == null){"Cannot specify both count and beforeId"}
+        return try {
+            val token = tokenProvider()
+            val response: MicroBlogTimelineResponse = client.get("/posts/mentions"){
+                header(HttpHeaders.Authorization, "Bearer $token")
+                parameter("count", count)
+                if (beforeId != null){
+                    parameter("before_id", beforeId)
+                }
+            }.body()
+            response.items
+        } catch (e: ClientRequestException){
+            Log.e("MicroBlogApi", "Error fetching mentions (${e.response.status}): ${e.message}", e)
+            emptyList()
+        } catch (e: Exception){
+            Log.e("MicroBlogApi", "Error fetching mentions: ${e.message}", e)
+            emptyList()
+        }
+    }
 
+    suspend fun getBookmarks(
+        count: Int = 20,
+        beforeId: String? = null
+    ): List<PostDto> {
+        require(count == null || beforeId == null){"Cannot specify both count and beforeId"}
+        return try {
+            val token = tokenProvider()
+            val response: MicroBlogTimelineResponse = client.get("/posts/bookmarks"){
+                header(HttpHeaders.Authorization, "Bearer $token")
+                parameter("count", count)
+                if (beforeId != null){
+                    parameter("before_id", beforeId)
+                }
+            }.body()
+            response.items
+        } catch (e: ClientRequestException){
+            Log.e("MicroBlogApi", "Error fetching booksmarks (${e.response.status}): ${e.message}", e)
+            emptyList()
+        } catch (e: Exception){
+            Log.e("MicroBlogApi", "Error fetching bookmarks: ${e.message}", e)
+            emptyList()
+        }
+    }
     /**
      * Posts a new entry. (Auth Required)
      */
@@ -189,7 +244,36 @@ object MicroBlogApi {
         }
     }
 
-    // TODO: Add functions for Mentions, Bookmarks, Search, Uploads etc.
+    // TODO: Add functions for Search, Uploads etc.
+    /**
+     * Fetches posts for a specific user.
+     * Endpoint: GET /posts/{username}
+     */
+    suspend fun getPostsForUser(
+        username: String,
+        beforeId: String? = null, // For pagination
+        count: Int = 20
+    ): List<PostDto> {
+        // Construct the path including the username
+        val path = "/posts/$username"
+        return try {
+            val token = tokenProvider()
+            val response: MicroBlogTimelineResponse = client.get(path) { // Use the constructed path
+                header(HttpHeaders.Authorization, "Bearer $token")
+                parameter("count", count)
+                if (beforeId != null) {
+                    parameter("before_id", beforeId)
+                }
+            }.body()
+            response.items
+        } catch (e: ClientRequestException) {
+            Log.e("MicroBlogApi", "Error fetching posts for user $username (${e.response.status}): ${e.message}", e)
+            emptyList()
+        } catch (e: Exception) {
+            Log.e("MicroBlogApi", "Error fetching posts for user $username: ${e.message}", e)
+            emptyList()
+        }
+    }
     // Remember to add the Authorization header inside each of these calls too!
 
 }

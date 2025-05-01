@@ -16,8 +16,10 @@ import androidx.navigation.compose.*
 import com.example.microcompose.ui.AppDestinations
 import com.example.microcompose.ui.BottomNavItem
 import com.example.microcompose.ui.bookmarks.BookmarksScreen
+import com.example.microcompose.ui.bookmarks.BookmarksViewModel
 import com.example.microcompose.ui.bottomNavItems
 import com.example.microcompose.ui.mentions.MentionsScreen
+import com.example.microcompose.ui.mentions.MentionsViewModel
 import com.example.microcompose.ui.timeline.TimelineScreen
 import com.example.microcompose.ui.timeline.TimelineViewModel
 
@@ -50,22 +52,21 @@ fun MainScreen(
         ) {
             composable(BottomNavItem.Timeline.route) {
                 // Get TimelineViewModel using the factory
-                val tlVM: TimelineViewModel = viewModel(factory = factory)
+                val timelineVM: TimelineViewModel = viewModel(factory = factory)
                 // Pass appNavController for actions like navigating to ProfileMenu/Compose
                 // Pass innerPadding to TimelineScreen if it needs to apply it directly
-                TimelineScreen(
-                    vm = tlVM,
-                    nav = appNavController,
-                    contentPadding = innerPadding
-                    )
+                TimelineScreen(vm = timelineVM, nav = appNavController)
             }
             composable(BottomNavItem.Mentions.route) {
                 // Pass padding if MentionsScreen needs it
-                MentionsScreen() // Modify MentionsScreen to accept PaddingValues if needed
+                val mentionsVM: MentionsViewModel = viewModel(factory = factory)
+                MentionsScreen(vm = mentionsVM, nav = appNavController) // Modify MentionsScreen to accept PaddingValues if needed
             }
             composable(BottomNavItem.Bookmarks.route) {
+                // TODO: Create BookmarksViewModel and Screen similar to Mentions
                 // Pass padding if BookmarksScreen needs it
-                BookmarksScreen() // Modify BookmarksScreen to accept PaddingValues if needed
+                val bookmarksVM: BookmarksViewModel = viewModel(factory = factory)
+                BookmarksScreen(vm = bookmarksVM, nav = appNavController) // Modify BookmarksScreen to accept PaddingValues if needed
             }
         }
     }

@@ -25,28 +25,40 @@ import com.example.microcompose.ui.data.UserPreferences
 import com.example.microcompose.ui.login.AuthViewModel
 import com.example.microcompose.ui.login.LoginScreen
 import com.example.microcompose.ui.main.MainScreen
+import com.example.microcompose.ui.mentions.MentionsViewModel
 import com.example.microcompose.ui.theme.MicroComposeTheme
 import com.example.microcompose.ui.timeline.TimelineViewModel
+import com.example.microcompose.ui.bookmarks.BookmarksViewModel
+import com.example.microcompose.ui.profile.ProfileScreen
+import com.example.microcompose.ui.profile.ProfileViewModel
 
 class MainActivity : ComponentActivity() {
 
-    // Updated ViewModel Factory
+    // Updated ViewModel Factory using AbstractSavedStateViewModelFactory
     class AppViewModelFactory(
         private val applicationContext: Context,
-        private val prefs: UserPreferences // Pass prefs directly
+        private val prefs: UserPreferences,
     ) : ViewModelProvider.Factory {
-        override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            // Get the singleton MicroBlogApi object
-            val api = MicroBlogApi
-            // Create repo with the api object
-            val repo = MicroBlogRepository(api)
 
+        // Create dependencies once
+        private val api = MicroBlogApi
+        private val repo = MicroBlogRepository(api)
+
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            // Use 'when' to check which ViewModel type is requested
             return when {
                 modelClass.isAssignableFrom(TimelineViewModel::class.java) ->
-                    TimelineViewModel(repo, prefs) as T // Pass prefs if needed by VM
+                    TimelineViewModel(repo, prefs) as T
+
                 modelClass.isAssignableFrom(AuthViewModel::class.java) ->
-                    AuthViewModel(repo, prefs) as T // Pass prefs
-                // Add other ViewModels here
+                    AuthViewModel(repo, prefs) as T // Doesn't need SavedStateHandle
+
+                modelClass.isAssignableFrom(MentionsViewModel::class.java) ->
+                    MentionsViewModel(repo, prefs) as T
+
+                modelClass.isAssignableFrom(BookmarksViewModel::class.java) ->
+                    BookmarksViewModel(repo, prefs) as T
+
                 else -> throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
             }
         }
@@ -126,6 +138,25 @@ class MainActivity : ComponentActivity() {
                                 onPosted = { appNavController.popBackStack() }
                             )
                         }
+                        // --- Add Profile Screen Destination ---
+                        composable(
+                            route = AppDestinations.PROFILE_ROUTE_TEMPLATE,
+                            arguments = listOf(
+                                navArgument(AppDestinations.PROFILE_USERNAME_ARG) { type = NavType.StringType },
+                                navArgument(AppDestinations.PROFILE_NAME_ARG) {
+                                    type = NavType.StringType; nullable = true
+                                    defaultValue = null },
+                                navArgument(AppDestinations.PROFILE_AVATAR_ARG) {
+                                    type = NavType.StringType; nullable = true
+                                    defaultValue = null }
+                            )
+                        ) { backStackEntry ->
+                            // Use factory to get ViewModel instance
+                            val profileVM: ProfileViewModel = viewModel()
+                            // Pass NavController for back navigation
+                            ProfileScreen(vm = profileVM, navController = appNavController)
+                        }
+                        // --- End Profile Screen Destination ---
                     }
                 }
             }
