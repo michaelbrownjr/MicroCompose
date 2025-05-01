@@ -174,54 +174,6 @@ object MicroBlogApi {
             emptyList()
         }
     }
-
-    suspend fun getMentions(
-        count: Int = 20,
-        beforeId: String? = null
-    ): List<PostDto> {
-        require(count == null || beforeId == null){"Cannot specify both count and beforeId"}
-        return try {
-            val token = tokenProvider()
-            val response: MicroBlogTimelineResponse = client.get("/posts/mentions"){
-                header(HttpHeaders.Authorization, "Bearer $token")
-                parameter("count", count)
-                if (beforeId != null){
-                    parameter("before_id", beforeId)
-                }
-            }.body()
-            response.items
-        } catch (e: ClientRequestException){
-            Log.e("MicroBlogApi", "Error fetching mentions (${e.response.status}): ${e.message}", e)
-            emptyList()
-        } catch (e: Exception){
-            Log.e("MicroBlogApi", "Error fetching mentions: ${e.message}", e)
-            emptyList()
-        }
-    }
-
-    suspend fun getBookmarks(
-        count: Int = 20,
-        beforeId: String? = null
-    ): List<PostDto> {
-        require(count == null || beforeId == null){"Cannot specify both count and beforeId"}
-        return try {
-            val token = tokenProvider()
-            val response: MicroBlogTimelineResponse = client.get("/posts/bookmarks"){
-                header(HttpHeaders.Authorization, "Bearer $token")
-                parameter("count", count)
-                if (beforeId != null){
-                    parameter("before_id", beforeId)
-                }
-            }.body()
-            response.items
-        } catch (e: ClientRequestException){
-            Log.e("MicroBlogApi", "Error fetching booksmarks (${e.response.status}): ${e.message}", e)
-            emptyList()
-        } catch (e: Exception){
-            Log.e("MicroBlogApi", "Error fetching bookmarks: ${e.message}", e)
-            emptyList()
-        }
-    }
     /**
      * Posts a new entry. (Auth Required)
      */

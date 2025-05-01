@@ -14,8 +14,6 @@ object AppDestinations {
     const val LOGIN = "login"
     const val MAIN = "main" // Host screen for bottom nav sections
     const val TIMELINE = "timeline"
-    const val MENTIONS = "mentions"
-    const val BOOKMARKS = "bookmarks"
     const val COMPOSE = "compose"
 
     const val PROFILE_ROUTE_BASE = "profile" // Base path
@@ -49,12 +47,8 @@ fun createProfileRoute(username: String, name: String?, avatarUrl: String?): Str
 // Define items for the bottom navigation bar
 sealed class BottomNavItem(val route: String, val icon: ImageVector, val label: String) {
     object Timeline : BottomNavItem(AppDestinations.TIMELINE, Icons.Filled.Home, "Timeline")
-    object Mentions : BottomNavItem(AppDestinations.MENTIONS, Icons.Filled.Notifications, "Mentions")
-    object Bookmarks : BottomNavItem(AppDestinations.BOOKMARKS, Icons.Filled.Bookmarks, "Bookmarks")
 }
 
 val bottomNavItems = listOf(
     BottomNavItem.Timeline,
-    BottomNavItem.Mentions,
-    BottomNavItem.Bookmarks
 )

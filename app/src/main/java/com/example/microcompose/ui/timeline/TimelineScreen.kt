@@ -23,7 +23,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
-import androidx.navigation.NavDestination.Companion.createRoute
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.microcompose.ui.common.InfiniteListHandler

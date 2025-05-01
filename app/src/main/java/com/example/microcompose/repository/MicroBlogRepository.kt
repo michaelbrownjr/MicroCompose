@@ -37,14 +37,6 @@ class MicroBlogRepository(
         return api.timeline(sinceId = sinceId, count = count)
     }
     suspend fun createPost(content: String) = api.postEntry(content)
-    suspend fun getMentionsPage(count: Int = 20, beforeId: String? = null): List<PostDto>{
-        // Log.d("MicroBlogRepo", "Fetching mentions page...") // Optional logging
-        return api.getMentions(beforeId = beforeId, count = count)
-    }
-    suspend fun getBookmarksPage(count: Int = 20, beforeId: String? = null): List<PostDto>{
-        // Log.d("MicroBlogRepo", "Fetching mentions page...") // Optional logging
-        return api.getBookmarks(beforeId = beforeId, count = count)
-    }
     suspend fun getPostsForUserPage(
         username: String,
         count: Int = 20,

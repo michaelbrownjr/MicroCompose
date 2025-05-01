@@ -53,7 +53,6 @@ fun TimelineItem(
 ) {
     var moreMenuExpanded by remember { mutableStateOf(false) }
 
-    // Optional: Calculate relative time
     val relativeTime = remember(post.datePublished) { getRelativeTimeString(post.datePublished) }
 
     Column(
@@ -109,27 +108,25 @@ fun TimelineItem(
             style = MaterialTheme.typography.bodyMedium
         )
 
-        Spacer(modifier = Modifier.height(5.dp))
-
-        // Action buttons row
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = { /* TODO */ }) { Icon(Icons.Filled.ChatBubbleOutline, "Reply", tint = MaterialTheme.colorScheme.onSurfaceVariant) }
-            IconButton(onClick = { /* TODO */ }) { Icon(Icons.Filled.BookmarkBorder, "Bookmark", tint = MaterialTheme.colorScheme.onSurfaceVariant) }
-            Box {
-                IconButton(onClick = { moreMenuExpanded = true }) { Icon(Icons.Filled.MoreVert, "More options", tint = MaterialTheme.colorScheme.onSurfaceVariant) }
-                DropdownMenu( expanded = moreMenuExpanded, onDismissRequest = { moreMenuExpanded = false } ) {
-                    DropdownMenuItem(
-                        text = { Text("Embed") },
-                        onClick = { onEmbedClick(post.url, post.author.username); moreMenuExpanded = false },
-                        leadingIcon = { Icon(Icons.Filled.Code, null) }
-                    )
-                }
-            }
-        } // End Action buttons row
+//        Spacer(modifier = Modifier.height(5.dp))
+//
+//        // Action buttons row
+//        Row(
+//            modifier = Modifier.fillMaxWidth(),
+//            horizontalArrangement = Arrangement.SpaceBetween,
+//            verticalAlignment = Alignment.CenterVertically
+//        ) {
+//            Box {
+//                IconButton(onClick = { moreMenuExpanded = true }) { Icon(Icons.Filled.MoreVert, "More options", tint = MaterialTheme.colorScheme.onSurfaceVariant) }
+//                DropdownMenu( expanded = moreMenuExpanded, onDismissRequest = { moreMenuExpanded = false } ) {
+//                    DropdownMenuItem(
+//                        text = { Text("Embed") },
+//                        onClick = { onEmbedClick(post.url, post.author.username); moreMenuExpanded = false },
+//                        leadingIcon = { Icon(Icons.Filled.Code, null) }
+//                    )
+//                }
+//            }
+//        } // End Action buttons row
     } // End Column
     HorizontalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 }

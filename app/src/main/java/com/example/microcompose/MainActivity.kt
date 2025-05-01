@@ -25,10 +25,8 @@ import com.example.microcompose.ui.data.UserPreferences
 import com.example.microcompose.ui.login.AuthViewModel
 import com.example.microcompose.ui.login.LoginScreen
 import com.example.microcompose.ui.main.MainScreen
-import com.example.microcompose.ui.mentions.MentionsViewModel
 import com.example.microcompose.ui.theme.MicroComposeTheme
 import com.example.microcompose.ui.timeline.TimelineViewModel
-import com.example.microcompose.ui.bookmarks.BookmarksViewModel
 import com.example.microcompose.ui.profile.ProfileScreen
 import com.example.microcompose.ui.profile.ProfileViewModel
 
@@ -52,12 +50,6 @@ class MainActivity : ComponentActivity() {
 
                 modelClass.isAssignableFrom(AuthViewModel::class.java) ->
                     AuthViewModel(repo, prefs) as T // Doesn't need SavedStateHandle
-
-                modelClass.isAssignableFrom(MentionsViewModel::class.java) ->
-                    MentionsViewModel(repo, prefs) as T
-
-                modelClass.isAssignableFrom(BookmarksViewModel::class.java) ->
-                    BookmarksViewModel(repo, prefs) as T
 
                 else -> throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
             }
