@@ -1,50 +1,27 @@
 package com.example.microcompose.repository
 
-import android.util.Log
-import com.example.microcompose.network.MicroBlogApi
 import com.example.microcompose.network.PostDto
 import com.example.microcompose.ui.data.VerifiedUser
 
-/**
- * Public surface that screens / view-models use.
- * The rest of the app never calls MicroBlogApi directly.
- */
-class MicroBlogRepository(
-    private val api: MicroBlogApi
-) {
+interface MicroBlogRepository {
+    suspend fun sendSignInLink(email: String): Result<Unit>
+    suspend fun verifyTempToken(temp: String): Result<VerifiedUser>
 
-    /* ─────────── AUTH ─────────── */
+    suspend fun firstPage(count: Int = 20): Result<List<PostDto>>
+    suspend fun pageBefore(id: String, count: Int = 20): Result<List<PostDto>>
+    suspend fun fetchNewerPosts(sinceId: String, count: Int = 20): Result<List<PostDto>>
+    suspend fun createPost(content: String): Result<PostDto>
 
-    suspend fun sendSignInLink(email: String): Boolean =
-        api.sendSignInLink(email)
-
-    suspend fun verifyTempToken(temp: String): VerifiedUser? =
-        api.verifyTempToken(temp)
-
-    /* MicroBlogRepository.kt */
-
-    suspend fun firstPage(count: Int = 20): List<PostDto> {
-        Log.d("MicroBlogRepository", "firstPage")
-        return api.timeline(count = count)
-    }
-    suspend fun pageBefore(id: String, count: Int = 20): List<PostDto> {
-        // Log.d("MicroBlogRepo", "Fetching page before $id...") // Optional logging
-        return api.timeline(beforeId = id, count = count)
-    }
-    // New function to fetch posts newer than a given ID
-    suspend fun fetchNewerPosts(sinceId: String, count: Int = 20): List<PostDto> {
-        // Log.d("MicroBlogRepo", "Fetching posts since $sinceId...") // Optional logging
-        return api.timeline(sinceId = sinceId, count = count)
-    }
-    suspend fun createPost(content: String) = api.postEntry(content)
+    // Methods needed by ProfileViewModel (based on your Impl)
     suspend fun getPostsForUserPage(
         username: String,
         count: Int = 20,
         beforeId: String? = null
-    ): List<PostDto> {
-        Log.d("MicroBlogRepo", "Fetching posts page for user $username...")
-        return api.getPostsForUser(username = username, beforeId = beforeId, count = count)
-    }
+    ): Result<List<PostDto>>
 
-
+    // Add any other public methods from MicroBlogRepositoryImpl that are used by ViewModels.
+    // For example, do you still need getMentions() or getFavorites()? If so, add them here.
+    // suspend fun getMentions(): List<PostDto>
+    // suspend fun getFavorites(): List<PostDto>
+    // suspend fun getUserInfo(username: String): MicroblogAuthorDetailsDto? // Example if needed
 }

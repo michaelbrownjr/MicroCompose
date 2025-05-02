@@ -1,8 +1,10 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.hilt)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.kotlin.compose.compiler)
 }
 
 android {
@@ -41,35 +43,53 @@ android {
 }
 
 dependencies {
+// Use aliases from libs.versions.toml
 
+    // Core & Lifecycle
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
-    implementation(platform(libs.androidx.compose.bom))
-    implementation(libs.androidx.ui)
-    implementation(libs.androidx.ui.graphics)
-    implementation(libs.androidx.ui.tooling.preview)
-    implementation(libs.androidx.material3)
-    implementation(libs.androidx.material.icons.extended)
-    implementation(libs.coil.compose)
+
+    // Compose (using BOM for consistent versions)
+    implementation(platform(libs.androidx.compose.bom)) // Import the BOM
+    implementation(libs.bundles.compose) // Use the compose bundle
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.navigation.compose)
-    implementation(libs.firebase.crashlytics.buildtools)
-    implementation(libs.ktor.client.android)
-    implementation(libs.ktor.client.core)
-    implementation(libs.ktor.client.logging)
+    implementation(libs.androidx.hilt.navigation.compose) // Hilt integration for Compose Navigation
+
+    // Ktor Client (using the bundle)
+    implementation(libs.bundles.ktor)
+
+    // Hilt
+    implementation(libs.hilt.android)
+    ksp(libs.hilt.compiler)
+
+    // Networking (Retrofit & OkHttp)
+    implementation(libs.retrofit.core)
+    implementation(libs.retrofit.converter.gson)
+    implementation(libs.okhttp.core) // Explicitly include okhttp
+
+    // Coroutines
     implementation(libs.kotlinx.coroutines.android)
-    implementation(libs.ktor.serialization.kotlinx.json)
-    implementation(libs.ktor.client.content.negotiation)
-    implementation(libs.androidx.security)
+
+    // DataStore
     implementation(libs.androidx.datastore.preferences)
-    implementation(libs.lifecycle.viewmodel.compose)
 
+    // Kotlinx Serialization
+    implementation(libs.kotlinx.serialization.json)
+
+    // Coil (Image Loading)
+    implementation(libs.coil.compose)
+
+    // Testing
     testImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(platform(libs.androidx.compose.bom))
-    androidTestImplementation(libs.androidx.ui.test.junit4)
-    debugImplementation(libs.androidx.ui.tooling)
-    debugImplementation(libs.androidx.ui.test.manifest)
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.androidx.test.espresso.core)
+    androidTestImplementation(platform(libs.androidx.compose.bom)) // BOM for testing too
+    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
 
+    // Debugging (Compose UI Tooling & Manifest)
+    debugImplementation(platform(libs.androidx.compose.bom)) // BOM for debug too
+    debugImplementation(libs.bundles.compose.debug) // Use the compose-debug bundle
 }

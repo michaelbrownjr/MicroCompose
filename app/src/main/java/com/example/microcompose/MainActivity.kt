@@ -1,155 +1,76 @@
 /* Path: app/src/main/java/com/example/microcompose/MainActivity.kt */
 package com.example.microcompose
 
-import android.content.Context
 import android.os.Bundle
+import android.util.Log // Import Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.runtime.*
+import androidx.compose.material3.Surface
+import androidx.compose.runtime.* // Import LaunchedEffect, remember, getValue, by
 import androidx.compose.ui.Modifier
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
+import androidx.hilt.navigation.compose.hiltViewModel // Import hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavType
-import androidx.navigation.compose.*
-import androidx.navigation.navArgument
-import androidx.navigation.navDeepLink
-import com.example.microcompose.network.MicroBlogApi // Ensure this import is present
-import com.example.microcompose.repository.MicroBlogRepository
-import com.example.microcompose.ui.AppDestinations
-import com.example.microcompose.ui.compose.ComposeScreen
-import com.example.microcompose.ui.data.UserPreferences
+import androidx.navigation.compose.rememberNavController
+import com.example.microcompose.ui.AppNavigation // Import your AppNavigation composable
+import com.example.microcompose.ui.AppDestinations // Import destinations
+import com.example.microcompose.ui.login.AuthState // Import AuthState
 import com.example.microcompose.ui.login.AuthViewModel
-import com.example.microcompose.ui.login.LoginScreen
-import com.example.microcompose.ui.main.MainScreen
 import com.example.microcompose.ui.theme.MicroComposeTheme
-import com.example.microcompose.ui.timeline.TimelineViewModel
-import com.example.microcompose.ui.profile.ProfileScreen
-import com.example.microcompose.ui.profile.ProfileViewModel
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint // Keep this annotation
 class MainActivity : ComponentActivity() {
-
-    // Updated ViewModel Factory using AbstractSavedStateViewModelFactory
-    class AppViewModelFactory(
-        private val applicationContext: Context,
-        private val prefs: UserPreferences,
-    ) : ViewModelProvider.Factory {
-
-        // Create dependencies once
-        private val api = MicroBlogApi
-        private val repo = MicroBlogRepository(api)
-
-        override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            // Use 'when' to check which ViewModel type is requested
-            return when {
-                modelClass.isAssignableFrom(TimelineViewModel::class.java) ->
-                    TimelineViewModel(repo, prefs) as T
-
-                modelClass.isAssignableFrom(AuthViewModel::class.java) ->
-                    AuthViewModel(repo, prefs) as T // Doesn't need SavedStateHandle
-
-                else -> throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
-            }
-        }
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Log.d("MainActivity", "onCreate Intent: ${intent?.action} Data: ${intent?.data}")
 
         setContent {
-            /* ─── Singletons / Setup ─── */
-            val prefs = remember { UserPreferences(applicationContext) }
+            MicroComposeTheme { // Apply theme
+                val appNavController = rememberNavController()
+                val authViewModel: AuthViewModel = hiltViewModel()
+                val authState by authViewModel.state.collectAsStateWithLifecycle()
 
-            // ---> Initialize the MicroBlogApi object ONCE here <---
-            LaunchedEffect(Unit) { // Runs once when setContent composition starts
-                MicroBlogApi.initialize { prefs.token() }
-            }
+                var currentIntentData by remember { mutableStateOf(intent?.data) }
+                LaunchedEffect(intent?.data) {
+                    currentIntentData = intent?.data
+                }
 
-            val factory = remember { AppViewModelFactory(applicationContext, prefs) }
-            val currentToken by prefs.tokenFlow.collectAsStateWithLifecycle(initialValue = null)
-            val appNavController = rememberNavController()
-
-            /* ─── Login/Logout Navigation Logic ─── */
-            LaunchedEffect(currentToken, appNavController) {
-                currentToken?.let { token ->
-                    val currentRoute = appNavController.currentBackStackEntry?.destination?.route
-                    if (token.isBlank() && currentRoute != AppDestinations.LOGIN) {
-                        appNavController.navigate(AppDestinations.LOGIN) {
-                            popUpTo(appNavController.graph.id) { inclusive = true }
-                            launchSingleTop = true
-                        }
-                    } else if (token.isNotBlank() && currentRoute == AppDestinations.LOGIN) {
-                        appNavController.navigate(AppDestinations.MAIN) {
-                            popUpTo(AppDestinations.LOGIN) { inclusive = true }
-                            launchSingleTop = true
-                        }
+                // Determine the start destination based on the initial auth state
+                // remember ensures this calculation runs only when authState changes
+                val startRoute = remember(authState) {
+                    Log.d("MainActivity", "Composition: Auth State is $authState")
+                    when (authState) {
+                        is AuthState.Authed -> AppDestinations.MAIN
+                        else -> AppDestinations.LOGIN
                     }
                 }
-            }
+                Log.d("MainActivity", "Setting startDestination: $startRoute")
 
-            /* ─── UI based on token state ─── */
-            if (currentToken == null) {
-                Box(modifier = Modifier.fillMaxSize()) // Splash/Loading
-            } else {
-                val startDestination = if (currentToken!!.isNotBlank()) AppDestinations.MAIN else AppDestinations.LOGIN
+                // Handle deep link verification after composition is ready and ViewModel is available
+                LaunchedEffect(currentIntentData, authState) {
+                    val data = currentIntentData
+                    Log.d("MainActivity", "LaunchedEffect: Data = $data, Auth State = $authState")
+                    // Only attempt verification if we have a token AND we are not already authenticated
+                    if (data?.scheme == "microcompose" && data.host == "signing") {
+                        val token = data.getQueryParameter("token")
+                        Log.i("MainActivity", "LaunchedEffect: Verifying token '$token' from deep link.")
+                        authViewModel.verify(token.toString())
 
-                MicroComposeTheme {
-                    NavHost(
-                        navController = appNavController,
-                        startDestination = startDestination
-                    ) {
-                        // Login Screen
-                        composable(
-                            route = AppDestinations.LOGIN,
-                            deepLinks = listOf(navDeepLink { uriPattern = "microcompose://signin/{token}" }),
-                            arguments = listOf(navArgument("token") { type = NavType.StringType; nullable = true })
-                        ) { backStackEntry ->
-                            val deepLinkToken = backStackEntry.arguments?.getString("token")
-                            // Use factory to get ViewModel
-                            val authVM: AuthViewModel = viewModel(factory = factory)
-                            LaunchedEffect(deepLinkToken) { deepLinkToken?.let { authVM.verify(it) } }
-                            LoginScreen(vm = authVM, nav = appNavController)
-                        }
-
-                        // Main Screen
-                        composable(AppDestinations.MAIN) {
-                            // Pass the factory down
-                            MainScreen(appNavController = appNavController, factory = factory)
-                        }
-
-                        // Compose Screen
-                        composable(AppDestinations.COMPOSE) {
-                            // ---> Use the singleton MicroBlogApi object here too <---
-                            val repo = remember { MicroBlogRepository(MicroBlogApi) }
-                            ComposeScreen(
-                                nav = appNavController,
-                                repo = repo,
-                                onPosted = { appNavController.popBackStack() }
-                            )
-                        }
-                        // --- Add Profile Screen Destination ---
-                        composable(
-                            route = AppDestinations.PROFILE_ROUTE_TEMPLATE,
-                            arguments = listOf(
-                                navArgument(AppDestinations.PROFILE_USERNAME_ARG) { type = NavType.StringType },
-                                navArgument(AppDestinations.PROFILE_NAME_ARG) {
-                                    type = NavType.StringType; nullable = true
-                                    defaultValue = null },
-                                navArgument(AppDestinations.PROFILE_AVATAR_ARG) {
-                                    type = NavType.StringType; nullable = true
-                                    defaultValue = null }
-                            )
-                        ) { backStackEntry ->
-                            // Use factory to get ViewModel instance
-                            val profileVM: ProfileViewModel = viewModel()
-                            // Pass NavController for back navigation
-                            ProfileScreen(vm = profileVM, navController = appNavController)
-                        }
-                        // --- End Profile Screen Destination ---
                     }
+                }
+
+                Surface(modifier = Modifier.fillMaxSize()) {
+                    // --- Call AppNavigation ---
+                    // Pass the NavController and calculated startDestination
+                    AppNavigation(
+                        navController = appNavController,
+                        startDestination = startRoute,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                    // The NavHost and composable screens are now defined inside AppNavigation
+                    // --- End AppNavigation Call ---
                 }
             }
         }

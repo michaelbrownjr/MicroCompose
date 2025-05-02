@@ -1,8 +1,10 @@
 package com.example.microcompose.ui.common
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,6 +20,7 @@ import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.Card
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -55,62 +58,83 @@ fun TimelineItem(
 
     val relativeTime = remember(post.datePublished) { getRelativeTimeString(post.datePublished) }
 
-    Column(
+    val colors = CardDefaults.cardColors(
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
+    )
+    Card(
         modifier = Modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surface)
-            .padding(16.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(
+            // Choose appropriate roles from your theme's color scheme
+            // Example: Slightly different background than the main screen background
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest, // Or surfaceVariant, surface, etc.
+            // Default color for text/icons inside the card
+            contentColor = MaterialTheme.colorScheme.onSurface // Or onSurfaceVariant etc.
+        ),
+        shape = MaterialTheme.shapes.medium,
+        onClick = {
+            Log.d("TimelineItem", "Clicked on post: ${post.url}")
+        }
     ) {
-        Row( // Top Row
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.surface)
+                .padding(16.dp)
         ) {
-            AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current)
-                    .data(post.author.avatar)
-                    .crossfade(true)
-                    // .placeholder(R.drawable.ic_avatar_placeholder)
-                    // .error(R.drawable.ic_avatar_placeholder)
-                    .build(),
-                contentDescription = "${post.author.avatar} avatar",
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.size(40.dp)
-                    .clip(CircleShape)
-                    .clickable{ onAvatarClick(post.author) }
-            )
-            Spacer(modifier = Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = post.author.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text( // Timestamp
-                        text = relativeTime, // Or use 'relativeTime'
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "@" + post.author.username,
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Light
-                    )
+            Row( // Top Row
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(post.author.avatar)
+                        .crossfade(true)
+                        // .placeholder(R.drawable.ic_avatar_placeholder)
+                        // .error(R.drawable.ic_avatar_placeholder)
+                        .build(),
+                    contentDescription = "${post.author.avatar} avatar",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.size(40.dp)
+                        .clip(CircleShape)
+                        .clickable{ onAvatarClick(post.author) }
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = post.author.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text( // Timestamp
+                            text = relativeTime, // Or use 'relativeTime'
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "@" + post.author.username,
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontWeight = FontWeight.Light
+                        )
+                    }
                 }
             }
-        }
 
-        Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-        // Post content
-        Text(
-            text = htmlToAnnotatedString(post.html),
-            style = MaterialTheme.typography.bodyMedium
-        )
+            // Post content
+            Text(
+                text = htmlToAnnotatedString(post.html),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
 
-//        Spacer(modifier = Modifier.height(5.dp))
-//
-//        // Action buttons row
+    //        Spacer(modifier = Modifier.height(5.dp))
+    //
+    //        // Action buttons row
 //        Row(
 //            modifier = Modifier.fillMaxWidth(),
 //            horizontalArrangement = Arrangement.SpaceBetween,
@@ -127,6 +151,7 @@ fun TimelineItem(
 //                }
 //            }
 //        } // End Action buttons row
-    } // End Column
-    HorizontalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+        } // End Column
+    }
+    //    HorizontalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 }

@@ -1,4 +1,4 @@
-/* Path: app/src/main/java/com/example/microcompose/network/MicroBlogApi.kt */
+/* Path: app/src/main/java/com/example/microcompose/network/MicroBlogAPI.kt */
 package com.example.microcompose.network
 
 import android.util.Log
@@ -10,13 +10,13 @@ import io.ktor.client.plugins.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.plugins.logging.*
 import io.ktor.client.request.*
-import io.ktor.client.request.forms.submitForm
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import okio.IOException
 
 // Define Data Transfer Objects (DTOs) matching the JSON structure
 
@@ -110,7 +110,7 @@ object MicroBlogApi {
     /**
      * Requests a sign-in link. (No Auth needed)
      */
-    suspend fun sendSignInLink(email: String): Boolean {
+    suspend fun sendSignInLink(email: String): Result<Unit> {
 
         // Define MicroCompose custom redirect URL prefix
         val redirectUrl = "microcompose://signin/"
@@ -123,28 +123,26 @@ object MicroBlogApi {
                 parameter("app_name", appName)
                 parameter("redirect_url", redirectUrl)
             }
-            response.status.isSuccess()
+            Result.success(Unit)
         } catch (e: Exception) {
             Log.e("MicroBlogApi", "Error sending sign-in link: ${e.message}", e)
-            false
+            Result.failure(e)
         }
     }
 
     /**
      * Verifies a temporary token. (No Auth needed)
      */
-    suspend fun verifyTempToken(tempToken: String): VerifiedUser? {
+    suspend fun verifyTempToken(tempToken: String): Result<VerifiedUser> {
         return try {
-            client.post("/account/verify") {
+            val verifiedUSer = client.post("/account/verify") {
                 parameter("token", tempToken)
             }.body<VerifiedUser>()
-        } catch (e: Exception) {
-            Log.w("MicroBlogApi", "Deserialization failed for /account/verify, likely an API error response: ${e.message}")
-            null
+            Result.success(verifiedUSer)
         } catch (e: Exception) {
             // Catch other potential exceptions (network errors, etc.)
             Log.e("MicroBlogApi", "Error verifying temp token: ${e.message}", e)
-            null // Indicate verification failure
+            Result.failure(e)
         }
     }
 
@@ -155,7 +153,7 @@ object MicroBlogApi {
         sinceId: String? = null,
         beforeId: String? = null,
         count: Int = 20
-    ): List<PostDto> {
+    ): Result<List<PostDto>> {
         require(sinceId == null || beforeId == null) { "Cannot specify both sinceId and beforeId" }
         return try {
             val token = tokenProvider()
@@ -168,31 +166,55 @@ object MicroBlogApi {
                     parameter("before_id", beforeId)
                 }
             }.body()
-            response.items
+            Result.success(response.items)
         } catch (e: Exception) {
             Log.e("MicroBlogApi", "Error fetching timeline: ${e.message}", e)
-            emptyList()
+            Result.failure(e)
         }
     }
     /**
      * Posts a new entry. (Auth Required)
      */
-    suspend fun postEntry(markdown: String): Boolean {
+    suspend fun postEntry(markdown: String): Result<PostDto> { // Change return type to PostDto?
         return try {
-            // Add Auth header here
             val token = tokenProvider()
+            // Make the Ktor POST request
             val response: HttpResponse = client.post("/micropub") {
-                header(HttpHeaders.Authorization, "Bearer $token") // <-- Add Auth header
+                header(HttpHeaders.Authorization, "Bearer $token")
                 contentType(ContentType.Application.Json)
+                // Optional: If the server requires it to return the full post, add Prefer header.
+                // You might need to experiment if this is necessary for Micro.blog.
+                // header("Prefer", "return=representation")
                 setBody(mapOf(
                     "h" to "entry",
                     "content" to markdown
                 ))
             }
-            response.status == HttpStatusCode.Created || response.status == HttpStatusCode.Accepted
+
+            // Check for successful status codes (201 Created or 202 Accepted)
+            if (response.status == HttpStatusCode.Created || response.status == HttpStatusCode.Accepted) {
+                try {
+                    // Attempt to deserialize the response body into a PostDto
+                    val postDto = response.body<PostDto>()
+                    Result.success(postDto)
+                } catch (e: NoTransformationFoundException) {
+                    // Server likely returned success status but no (or non-JSON) body
+                    Log.w("MicroBlogApi", "Post created (status ${response.status}), but no PostDto in body. Location: ${response.headers[HttpHeaders.Location]}")
+                    Result.failure(IOException("POst created, but server did not return post detail"))
+                } catch (e: Exception) {
+                    // Catch other potential deserialization errors
+                    Log.e("MicroBlogApi", "Error deserializing post entry response body: ${e.message}", e)
+                    Result.failure(e)
+                }
+            } else {
+                val errorBody = try { response.bodyAsText() } catch (_: Exception) { "(Could not read error body)" }
+                Log.w("MicroBlogApi", "Post entry failed with status: ${response.status} - Body: ${response.bodyAsText()}")
+                Result.failure(ClientRequestException(response, errorBody))
+            }
         } catch (e: Exception) {
-            Log.e("MicroBlogApi", "Error posting entry: ${e.message}", e)
-            false
+            // Catch network or other exceptions during the request
+            Log.e("MicroBlogApi", "Error posting entry request: ${e.message}", e)
+            Result.failure(e)
         }
     }
 
@@ -205,7 +227,7 @@ object MicroBlogApi {
         username: String,
         beforeId: String? = null, // For pagination
         count: Int = 20
-    ): List<PostDto> {
+    ): Result<List<PostDto>> {
         // Construct the path including the username
         val path = "/posts/$username"
         return try {
@@ -217,15 +239,10 @@ object MicroBlogApi {
                     parameter("before_id", beforeId)
                 }
             }.body()
-            response.items
-        } catch (e: ClientRequestException) {
-            Log.e("MicroBlogApi", "Error fetching posts for user $username (${e.response.status}): ${e.message}", e)
-            emptyList()
+            Result.success(response.items)
         } catch (e: Exception) {
             Log.e("MicroBlogApi", "Error fetching posts for user $username: ${e.message}", e)
-            emptyList()
+            Result.failure(e)
         }
     }
-    // Remember to add the Authorization header inside each of these calls too!
-
 }
