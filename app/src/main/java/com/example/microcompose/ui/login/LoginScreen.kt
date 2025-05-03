@@ -36,7 +36,7 @@ fun LoginScreen(
         when (uiState) {
             is AuthState.EmailSent -> snackbar.showSnackbar("Check your inbox for the sign-in link.")
             is AuthState.Error     -> snackbar.showSnackbar((uiState as AuthState.Error).msg)
-            is AuthState.Authed    -> nav.navigate("timeline") {
+            is AuthState.Authed    -> nav.navigate("main") {
                 popUpTo("login") { inclusive = true }
             }
             else -> Unit

@@ -22,8 +22,23 @@ class AuthViewModel @Inject constructor(
     private val prefs: UserPreferences
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow<AuthState>(AuthState.Idle)
+    private val _state = MutableStateFlow<AuthState>(AuthState.LoadingAuthCheck)
     val state: StateFlow<AuthState> = _state.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            val existingToken = prefs.token()
+            if (existingToken.isNotBlank()) {
+                val savedUsername = prefs.username()
+                val usernameToShow = savedUsername.ifBlank { "User" }
+                Log.i("AuthViewModel", "Init: Found existing token. Username: '$usernameToShow'. Setting state to Authenticated")
+                _state.value = AuthState.Authed(usernameToShow)
+            } else {
+                Log.i("AuthViewModel", "Init: No existing token found.")
+                _state.value = AuthState.Idle
+            }
+        }
+    }
 
     /** 1⃣ User typed an e-mail, tap “Send link” */
     fun sendLink(email: String){
@@ -71,6 +86,13 @@ class AuthViewModel @Inject constructor(
                     // Save permanent token and avatar
                     prefs.saveToken(permanentToken)
                     verifiedUser.avatar?.let { prefs.saveAvatarUrl(it) }
+
+                    if (!verifiedUser.username.isNullOrBlank()) {
+                        prefs.saveUsername(verifiedUser.username)
+                        Log.d("AuthViewModel", "Saved username:  ${verifiedUser.username}")
+                    } else {
+                        Log.w("AuthViewModel", "Username from verification was null/blank, not saved")
+                    }
                     _state.value = AuthState.Authed(userNameOrDefault)
                 } else {
                     // API succeeded (2xx) but didn't return a valid permanent token
@@ -110,6 +132,7 @@ class AuthViewModel @Inject constructor(
 /* ─────── View-state used by LoginScreen ─────── */
 
 sealed interface AuthState {
+    object LoadingAuthCheck : AuthState
     object Idle             : AuthState
     object Loading          : AuthState
     object EmailSent        : AuthState      // ask user to check their inbox
