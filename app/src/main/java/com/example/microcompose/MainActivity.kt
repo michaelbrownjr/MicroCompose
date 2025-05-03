@@ -53,10 +53,21 @@ class MainActivity : ComponentActivity() {
                     val data = currentIntentData
                     Log.d("MainActivity", "LaunchedEffect: Data = $data, Auth State = $authState")
                     // Only attempt verification if we have a token AND we are not already authenticated
-                    if (data?.scheme == "microcompose" && data.host == "signing") {
-                        val token = data.getQueryParameter("token")
-                        Log.i("MainActivity", "LaunchedEffect: Verifying token '$token' from deep link.")
-                        authViewModel.verify(token.toString())
+                    if (data?.scheme == "microcompose" && data.host == "signin") {
+                        val pathSegments = data.pathSegments
+                        if(pathSegments != null && pathSegments.size == 1){
+                            val token = pathSegments[0]
+                            Log.i("MainActivity", "LaunchedEffect: Verifying token '$token' from deep link.")
+                            if (token.isNotBlank() && authState !is AuthState.Authed) {
+                                Log.i("MainActivity", "LaunchedEffect: Calling verify with token '$token'.")
+                                authViewModel.verify(token)
+                            } else if (token.isBlank()) {
+                                Log.w("MainActivity", "LaunchedEffect: Extracted token is blank.")
+                            } else {
+                                Log.w("MainActivity", "LaunchedEffect: Deep link URI path segments not as expected: $pathSegments")}
+                        }
+                        currentIntentData = null
+                        intent?.data = null
 
                     }
                 }
