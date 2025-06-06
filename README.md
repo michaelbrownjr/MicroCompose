@@ -2,7 +2,7 @@
 
 MicroCompose is an Android application built with Jetpack Compose that serves as a client for the Micro.blog platform. It allows users to interact with their Micro.blog accounts, view timelines, and post new content.
 
-![Alt text for the image](https://photos.app.goo.gl/72GT9r8Q6cnU9U3SA)
+![Alt text for the image](micro.blog-client.png)
 
 ## Features
 
