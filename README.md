@@ -22,9 +22,8 @@ MicroCompose is an Android application built with Jetpack Compose that serves as
 
 1.  Clone the repository:
     ```bash
-    git clone https://github.com/your-username/microcompose.git
+    git clone https://github.com/michaelbrownjr/microcompose.git
     ```
-    (Replace `your-username/microcompose.git` with the actual repository URL if different)
 2.  Open the project in Android Studio.
 3.  Let Android Studio sync and download the necessary Gradle dependencies.
 4.  Build and run the application on an Android emulator or a physical device.
