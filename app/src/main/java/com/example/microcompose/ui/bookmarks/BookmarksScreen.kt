@@ -1,4 +1,4 @@
-package com.example.microcompose.ui.mentions
+package com.example.microcompose.ui.bookmarks
 
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,9 +24,9 @@ import com.example.microcompose.ui.timeline.PostItem
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MentionsScreen(
+fun BookmarksScreen(
     nav: NavController,
-    viewModel: MentionsViewModel = hiltViewModel()
+    viewModel: BookmarksViewModel = hiltViewModel()
 ) {
     val posts by viewModel.posts.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
@@ -37,7 +37,7 @@ fun MentionsScreen(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Mentions") },
+                title = { Text("Bookmarks") },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                     containerColor = Color.Transparent,
                     scrolledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
@@ -48,7 +48,7 @@ fun MentionsScreen(
     ) { paddingValues ->
         androidx.compose.material3.pulltorefresh.PullToRefreshBox(
             isRefreshing = isRefreshing,
-            onRefresh = { viewModel.loadMentions() },
+            onRefresh = { viewModel.loadBookmarks() },
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)

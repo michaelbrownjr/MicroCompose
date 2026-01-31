@@ -19,8 +19,9 @@ import androidx.navigation.compose.rememberNavController
 import com.example.microcompose.ui.AppDestinations
 import com.example.microcompose.ui.navigation.BottomNavItem
 import com.example.microcompose.ui.timeline.TimelineScreen
-
 import com.example.microcompose.ui.mentions.MentionsScreen
+import com.example.microcompose.ui.bookmarks.BookmarksScreen
+import com.example.microcompose.ui.discover.DiscoverScreen
 
 @Composable
 fun MainScreen(
@@ -79,15 +80,19 @@ fun MainScreen(
                 TimelineScreen(
                     nav = appNavController,
                     onCompose = {
-                        appNavController.navigate(AppDestinations.COMPOSE)
+                        appNavController.navigate(com.example.microcompose.ui.createComposeRoute())
                     }
                 )
             }
             composable(BottomNavItem.Mentions.route) { 
-                MentionsScreen(nav = mainNavController)
+                MentionsScreen(nav = appNavController)
             }
-            composable(BottomNavItem.Bookmarks.route) { PlaceholderScreen("Bookmarks") }
-            composable(BottomNavItem.Discover.route) { PlaceholderScreen("Discover") }
+            composable(BottomNavItem.Bookmarks.route) { 
+                BookmarksScreen(nav = appNavController)
+            }
+            composable(BottomNavItem.Discover.route) { 
+                DiscoverScreen(nav = appNavController)
+            }
         }
     }
 }

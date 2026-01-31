@@ -70,13 +70,63 @@ class AppRepository @Inject constructor(
         }
     }
 
-    suspend fun createPost(content: String): Result<Unit> {
+    suspend fun getFavorites(): List<Post> {
+        val token = prefs.token()
+        if (token.isBlank()) return emptyList()
+
+        return try {
+            api.getFavorites("Bearer $token").items
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
+    }
+
+    suspend fun getDiscover(): List<Post> {
+        val token = prefs.token()
+        // Discover might work without token, but passing it is safe if authenticated
+        // If token is blank, maybe we shouldn't fail? But let's assume auth for now.
+        if (token.isBlank()) return emptyList()
+
+        return try {
+            api.getDiscover("Bearer $token").items
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
+    }
+
+    suspend fun getConversation(postId: String): List<Post> {
+        val token = prefs.token()
+        if (token.isBlank()) return emptyList()
+
+        return try {
+            api.getConversation("Bearer $token", postId).items
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
+    }
+
+    suspend fun getUserPosts(username: String): List<Post> {
+        val token = prefs.token()
+        if (token.isBlank()) return emptyList()
+
+        return try {
+            api.getUserPosts("Bearer $token", username).items
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
+    }
+
+    suspend fun createPost(content: String, inReplyTo: String? = null): Result<Unit> {
         val token = prefs.token()
         if (token.isBlank()) return Result.failure(IllegalStateException("No token"))
         
         return try {
             // Micropub posting
-            val response = api.createPost(token = "Bearer $token", content = content)
+            val response = api.createPost(token = "Bearer $token", content = content, inReplyTo = inReplyTo)
             if (response.isSuccessful) {
                 Result.success(Unit)
             } else {

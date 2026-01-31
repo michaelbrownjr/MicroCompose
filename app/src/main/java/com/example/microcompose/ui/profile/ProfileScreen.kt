@@ -23,8 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
-import com.example.microcompose.ui.common.InfiniteListHandler
-import com.example.microcompose.ui.common.TimelineItem
+import com.example.microcompose.ui.timeline.PostItem
 import kotlinx.coroutines.launch
 
 
@@ -151,23 +150,29 @@ fun ProfileScreen(
                             }
                         } else {
                             items(posts, key = { "post_${it.id}" }) { post -> // Ensure unique keys
-                                TimelineItem(
+                                PostItem(
                                     post = post,
-                                    // Removed onAvatarClick as we are already on the profile
-                                    onAvatarClick = {},
-                                    // Pass other lambdas if needed (reply, share, etc.)
-                                    onEmbedClick = { postUrl, authorName ->
-                                        val embedCode = "<blockquote><p>via <a href=\\\"$postUrl\\\">@$authorName</a></p></blockquote>"
-                                        clipboardManager.setText(AnnotatedString(embedCode))
-                                        // Show snackbar confirmation
-                                        scope.launch { snackbarHostState.showSnackbar("Embed code copied!") }
+                                    onPostClick = { postId ->
+                                        navController.navigate(com.example.microcompose.ui.createPostDetailRoute(postId))
+                                    },
+                                    onAvatarClick = { username ->
+                                        navController.navigate(
+                                            com.example.microcompose.ui.createProfileRoute(
+                                                username = username,
+                                                name = post.author?.name,
+                                                avatarUrl = post.author?.avatar
+                                            )
+                                        )
+                                    },
+                                    onReplyClick = { postId, username ->
+                                        navController.navigate(
+                                            com.example.microcompose.ui.createComposeRoute(
+                                                replyToPostId = postId,
+                                                initialContent = "@$username "
+                                            )
+                                        )
                                     }
                                 )
-                            }
-                            // Pagination item
-                            item("pagination_loader") {
-                                InfiniteListHandler(listState = listState) { vm.loadMorePosts() }
-                                // Optionally show loading indicator here based on paginationLoading state if added back
                             }
                         }
                     }

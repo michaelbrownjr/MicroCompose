@@ -27,7 +27,12 @@ object AppDestinations {
     const val LOGIN = "login"
     const val MAIN = "main"
     const val TIMELINE = "timeline"
-    const val COMPOSE = "compose"
+
+
+    const val COMPOSE_BASE = "compose"
+    const val COMPOSE_REPLY_TO_ARG = "replyTo"
+    const val COMPOSE_INITIAL_CONTENT_ARG = "initialContent"
+    const val COMPOSE_ROUTE_TEMPLATE = "$COMPOSE_BASE?$COMPOSE_REPLY_TO_ARG={$COMPOSE_REPLY_TO_ARG}&$COMPOSE_INITIAL_CONTENT_ARG={$COMPOSE_INITIAL_CONTENT_ARG}"
 
     const val PROFILE_ROUTE_BASE = "profile" // Base path
     const val PROFILE_USERNAME_ARG = "username" // Path argument (required)
@@ -38,8 +43,10 @@ object AppDestinations {
         "$PROFILE_ROUTE_BASE/{$PROFILE_USERNAME_ARG}?" +
                 "$PROFILE_NAME_ARG={$PROFILE_NAME_ARG}&" +
                 "$PROFILE_AVATAR_ARG={$PROFILE_AVATAR_ARG}"
-    // Add other destinations like Settings if needed
 
+    const val POST_DETAIL_ROUTE_BASE = "post"
+    const val POST_ID_ARG = "postId"
+    const val POST_DETAIL_ROUTE_TEMPLATE = "$POST_DETAIL_ROUTE_BASE/{$POST_ID_ARG}"
 }
 
 // --- Navigation Helper Function ---
@@ -54,6 +61,19 @@ fun createProfileRoute(username: String, name: String?, avatarUrl: String?): Str
     return "${AppDestinations.PROFILE_ROUTE_BASE}/$username?" +
             "${AppDestinations.PROFILE_NAME_ARG}=$encodedName&" +
             "${AppDestinations.PROFILE_AVATAR_ARG}=$encodedAvatar"
+}
+
+fun createPostDetailRoute(postId: String): String {
+    return "${AppDestinations.POST_DETAIL_ROUTE_BASE}/$postId"
+}
+
+fun createComposeRoute(replyToPostId: String? = null, initialContent: String? = null): String {
+    val encodedContent = URLEncoder.encode(initialContent ?: "", StandardCharsets.UTF_8.toString())
+    return if (replyToPostId != null) {
+        "${AppDestinations.COMPOSE_BASE}?${AppDestinations.COMPOSE_REPLY_TO_ARG}=$replyToPostId&${AppDestinations.COMPOSE_INITIAL_CONTENT_ARG}=$encodedContent"
+    } else {
+        AppDestinations.COMPOSE_BASE
+    }
 }
 
 @Composable
@@ -92,7 +112,19 @@ fun AppNavigation(
         composable(AppDestinations.MAIN) { MainScreen(appNavController = navController) }
 
         composable(
-            route = AppDestinations.COMPOSE,
+            route = AppDestinations.COMPOSE_ROUTE_TEMPLATE,
+            arguments = listOf(
+                androidx.navigation.navArgument(AppDestinations.COMPOSE_REPLY_TO_ARG) {
+                    type = androidx.navigation.NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+                androidx.navigation.navArgument(AppDestinations.COMPOSE_INITIAL_CONTENT_ARG) {
+                    type = androidx.navigation.NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            ),
             // --- Custom Animation for Compose Screen (Example: Slide Up/Down) ---
             enterTransition = { slideInVertically(initialOffsetY = { it }, animationSpec = animationSpec) + fadeIn(fadeSpec) },
             exitTransition = { fadeOut(fadeSpec) }, // Fade out when navigating forward from it
@@ -111,9 +143,17 @@ fun AppNavigation(
             arguments = listOf( /* ... your navArguments ... */ )
             // Use default NavHost horizontal slide animations here
         ) { backStackEntry ->
-            // If ProfileViewModel requires arguments from SavedStateHandle, get it here:
             val profileVM: ProfileViewModel = hiltViewModel() // Use Hilt VM
             ProfileScreen(vm = profileVM, navController = navController)
+        }
+
+        composable(
+            route = AppDestinations.POST_DETAIL_ROUTE_TEMPLATE,
+            arguments = listOf(
+                androidx.navigation.navArgument(AppDestinations.POST_ID_ARG) { type = androidx.navigation.NavType.StringType }
+            )
+        ) {
+            com.example.microcompose.ui.postdetail.PostDetailScreen(nav = navController)
         }
     }
 }

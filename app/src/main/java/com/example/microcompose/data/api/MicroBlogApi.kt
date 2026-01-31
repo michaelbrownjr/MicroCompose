@@ -19,12 +19,35 @@ interface MicroBlogApi {
         @Header("Authorization") token: String
     ): TimelineResponse
 
+    @GET("posts/favorites")
+    suspend fun getFavorites(
+        @Header("Authorization") token: String
+    ): TimelineResponse
+
+    @GET("posts/discover")
+    suspend fun getDiscover(
+        @Header("Authorization") token: String
+    ): TimelineResponse
+
+    @GET("posts/conversation")
+    suspend fun getConversation(
+        @Header("Authorization") token: String,
+        @Query("id") postId: String
+    ): TimelineResponse
+
+    @GET("posts/{username}")
+    suspend fun getUserPosts(
+        @Header("Authorization") token: String,
+        @retrofit2.http.Path("username") username: String
+    ): TimelineResponse
+
     @retrofit2.http.FormUrlEncoded
     @POST("micropub")
     suspend fun createPost(
         @Header("Authorization") token: String,
         @retrofit2.http.Field("h") h: String = "entry",
-        @retrofit2.http.Field("content") content: String
+        @retrofit2.http.Field("content") content: String,
+        @retrofit2.http.Field("in-reply-to") inReplyTo: String? = null
     ): retrofit2.Response<Unit>
            // Ideally we check docs, but for now returning Any/Response is safer or handling 202.
            // The docs say "Micro.blog will return the final published URL for the post... and in the JSON body...".
