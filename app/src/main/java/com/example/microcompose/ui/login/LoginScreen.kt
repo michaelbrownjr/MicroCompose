@@ -1,120 +1,99 @@
 package com.example.microcompose.ui.login
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MarkUnreadChatAlt
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import com.example.microcompose.ui.AppDestinations
 
-/**
- * Single-screen sign-in flow.
- *
- * @param nav NavController supplied from MainActivity
- * @param vm  AuthViewModel injected from MainActivity
- */
 @Composable
 fun LoginScreen(
     nav: NavController,
     vm: AuthViewModel
 ) {
-    /* ---------- state & helpers ---------- */
+    // Keep it simple: Enter Token -> Login
+    var token by remember { mutableStateOf("") }
+    val uiState by vm.state.collectAsStateWithLifecycle()
 
-    val email      = remember { mutableStateOf("") }
-    val uiState    by vm.state.collectAsStateWithLifecycle()
-    val snackbar   = remember { SnackbarHostState() }
-    val scope      = rememberCoroutineScope()
-
-    /* react to AuthState changes once per emission */
     LaunchedEffect(uiState) {
-        when (uiState) {
-            is AuthState.EmailSent -> snackbar.showSnackbar("Check your inbox for the sign-in link.")
-            is AuthState.Error     -> snackbar.showSnackbar((uiState as AuthState.Error).msg)
-            is AuthState.Authed    -> nav.navigate("main") {
-                popUpTo("login") { inclusive = true }
+        if (uiState is AuthState.Authed) {
+            nav.navigate(AppDestinations.MAIN) {
+                popUpTo(AppDestinations.LOGIN) { inclusive = true }
             }
-            else -> Unit
         }
     }
 
-    /* ---------- UI ---------- */
-
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbar) }
-    ) { padding ->
+    Scaffold { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 32.dp, vertical = 32.dp),
-            verticalArrangement = Arrangement.SpaceEvenly,
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(paddingValues)
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
+            Text(
+                text = "Micro.blog Login",
+                style = MaterialTheme.typography.headlineLarge
+            )
+            
+            Spacer(modifier = Modifier.height(32.dp))
 
-            /* logo + tagline */
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(
-                    imageVector = Icons.Filled.MarkUnreadChatAlt,
-                    contentDescription = "App Logo",
-                    modifier = Modifier.size(80.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Text("MicroCompose", style = MaterialTheme.typography.headlineLarge)
-                Text("Sign in to continue", style = MaterialTheme.typography.bodyMedium)
-            }
+            OutlinedTextField(
+                value = token,
+                onValueChange = { token = it },
+                label = { Text("App Token") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)
+            )
 
-            /* e-mail input + button */
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    "Enter your Micro.blog email address",
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
+            Spacer(modifier = Modifier.height(16.dp))
 
-                OutlinedTextField(
-                    value = email.value,
-                    onValueChange = { email.value = it },
-                    label = { Text("Email Address") },
-                    keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Email),
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = uiState !is AuthState.Loading
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
+            if (uiState is AuthState.Loading) {
+                CircularProgressIndicator()
+            } else {
                 Button(
-                    onClick = { vm.sendLink(email.value) },
-                    enabled = email.value.isNotBlank() && uiState !is AuthState.Loading
+                    onClick = {
+                        vm.verify(token)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = token.isNotBlank()
                 ) {
-                    if (uiState is AuthState.Loading) {
-                        CircularProgressIndicator(
-                            strokeWidth = 2.dp,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                    }
-                    Text("Send Sign-in Link")
+                    Text("Login")
                 }
+            }
+            
+            if (uiState is AuthState.Error) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = (uiState as AuthState.Error).msg,
+                    color = MaterialTheme.colorScheme.error
+                )
             }
         }
     }
 }
-
-/* ---------- Preview (optional) ---------- */
-/*
-@Preview(showBackground = true)
-@Composable
-fun LoginScreenPreview() {
-    val dummyNav = rememberNavController()
-    val fakeVM = object : AuthViewModel(/* not needed for preview */) { }
-    LoginScreen(nav = dummyNav, vm = fakeVM)
-}
-*/

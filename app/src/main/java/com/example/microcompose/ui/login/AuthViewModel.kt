@@ -18,7 +18,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class AuthViewModel @Inject constructor(
-    private val repo: MicroBlogRepository,
+    private val repo: com.example.microcompose.data.AppRepository,
     private val prefs: UserPreferences
 ) : ViewModel() {
 
@@ -47,17 +47,18 @@ class AuthViewModel @Inject constructor(
             _state.value = AuthState.Error("Please enter a valid email address.")
             return
         }
-        viewModelScope.launch {
-            _state.value = AuthState.Loading
-            val result: Result<Unit> = repo.sendSignInLink(email)
-
-            result.onSuccess {
-                _state.value = AuthState.EmailSent
-            }.onFailure { exception ->
-            Log.e("AuthViewModel", "Error sending sign-in link", exception)
-                _state.value = AuthState.Error(mapAuthExceptionToMessage(exception, "send link"))
-            }
-        }
+//        viewModelScope.launch {
+//            _state.value = AuthState.Loading
+//            val result: Result<Unit> = repo.sendSignInLink(email)
+//
+//            result.onSuccess {
+//                _state.value = AuthState.EmailSent
+//            }.onFailure { exception ->
+//            Log.e("AuthViewModel", "Error sending sign-in link", exception)
+//                _state.value = AuthState.Error(mapAuthExceptionToMessage(exception, "send link"))
+//            }
+//        }
+        _state.value = AuthState.Error("Email sign-in not supported yet. Please use Token.")
     }
 
     /**
@@ -74,31 +75,33 @@ class AuthViewModel @Inject constructor(
         viewModelScope.launch {
             _state.value = AuthState.Loading
             Log.d("AuthViewModel", "Attempting to verify token: $tempToken.take(4)...")
-            val result: Result<VerifiedUser> = repo.verifyTempToken(tempToken)
+            Log.d("AuthViewModel", "Attempting to verify token: $tempToken.take(4)...")
+            val result: Result<VerifiedUser> = repo.verifyToken(tempToken)
 
             result.onSuccess { verifiedUser ->
-                if (!verifiedUser.token.isNullOrBlank()) {
-                    // Verification Success! Check if permanent token is present.
-                    val permanentToken = verifiedUser.token
-                    val userNameOrDefault = verifiedUser.username ?: "User"
-                    Log.d("AuthViewModel", "Token verified successfully. User: ${verifiedUser.username}, Token: ${permanentToken.take(4)}...")
-
-                    // Save permanent token and avatar
-                    prefs.saveToken(permanentToken)
-                    verifiedUser.avatar?.let { prefs.saveAvatarUrl(it) }
-
-                    if (!verifiedUser.username.isNullOrBlank()) {
-                        prefs.saveUsername(verifiedUser.username)
-                        Log.d("AuthViewModel", "Saved username:  ${verifiedUser.username}")
-                    } else {
-                        Log.w("AuthViewModel", "Username from verification was null/blank, not saved")
-                    }
-                    _state.value = AuthState.Authed(userNameOrDefault)
+                // Verification Success!
+                // If the API returns a token (magic link flow), use it.
+                // If not (app token flow), assume the input token is valid because the API call succeeded.
+                val permanentToken = if (!verifiedUser.token.isNullOrBlank()) {
+                    verifiedUser.token
                 } else {
-                    // API succeeded (2xx) but didn't return a valid permanent token
-                    Log.w("AuthViewModel", "Token verification succeeded but permanent token missing/blank. API Response: $verifiedUser")
-                    _state.value = AuthState.Error("Sign-in failed. Invalid data received from server.")
+                    tempToken
                 }
+
+                val userNameOrDefault = verifiedUser.username ?: "User"
+                Log.d("AuthViewModel", "Token verified successfully. User: ${verifiedUser.username}, Token: ${permanentToken.take(4)}...")
+
+                // Save permanent token and avatar
+                prefs.saveToken(permanentToken)
+                verifiedUser.avatar?.let { prefs.saveAvatarUrl(it) }
+
+                if (!verifiedUser.username.isNullOrBlank()) {
+                    prefs.saveUsername(verifiedUser.username)
+                    Log.d("AuthViewModel", "Saved username:  ${verifiedUser.username}")
+                } else {
+                    Log.w("AuthViewModel", "Username from verification was null/blank, not saved")
+                }
+                _state.value = AuthState.Authed(userNameOrDefault)
             }.onFailure { exception ->
                 Log.e("AuthViewModel", "Error verifying token", exception)
                 _state.value = AuthState.Error(mapAuthExceptionToMessage(exception, "verify token"))
