@@ -1,14 +1,15 @@
 package com.example.microcompose.ui.timeline
 
 import android.text.Html
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -19,8 +20,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.automirrored.outlined.Reply
 import androidx.compose.material.icons.outlined.BookmarkBorder
+import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -37,17 +38,24 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.nestedscroll.nestedScroll // Added import
+import androidx.compose.ui.graphics.painter.ColorPainter
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import com.example.microcompose.R
 import com.example.microcompose.data.model.Post
+import com.example.microcompose.data.model.User
+import com.example.microcompose.data.model.UserMicroBlog
+import com.example.microcompose.ui.theme.MicroComposeTheme
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TimelineScreen(
     nav: NavController,
@@ -57,21 +65,73 @@ fun TimelineScreen(
     val posts by viewModel.posts.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
 
+    TimelineContent(
+        posts = posts,
+        isRefreshing = isRefreshing,
+        onRefresh = { viewModel.loadTimeline() },
+        onCompose = onCompose,
+        onPostClick = { postId ->
+            nav.navigate(com.example.microcompose.ui.createPostDetailRoute(postId))
+        },
+        onAvatarClick = { username, name, avatarUrl ->
+            nav.navigate(
+                com.example.microcompose.ui.createProfileRoute(
+                    username = username,
+                    name = name,
+                    avatarUrl = avatarUrl
+                )
+            )
+        },
+        onReplyClick = { postId, username ->
+            nav.navigate(
+                com.example.microcompose.ui.createComposeRoute(
+                    replyToPostId = postId,
+                    initialContent = "@$username "
+                )
+            )
+        }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TimelineContent(
+    posts: List<Post>,
+    isRefreshing: Boolean,
+    onRefresh: () -> Unit,
+    onCompose: () -> Unit,
+    onPostClick: (String) -> Unit,
+    onAvatarClick: (String, String?, String?) -> Unit,
+    onReplyClick: (String, String) -> Unit
+) {
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Home") },
+                title = {
+                    Text(
+                        text = stringResource(R.string.home_title),
+                        style = MaterialTheme.typography.titleLarge
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = { /* TODO: Open Drawer */ }) {
-                        Icon(Icons.Filled.Menu, contentDescription = "Menu")
+                        Icon(
+                            imageVector = Icons.Filled.Menu,
+                            contentDescription = stringResource(R.string.menu_description),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
                     }
                 },
                 actions = {
                     IconButton(onClick = { /* TODO: Open Profile */ }) {
-                        Icon(Icons.Outlined.Person, contentDescription = "Profile")
+                        Icon(
+                            imageVector = Icons.Outlined.Person,
+                            contentDescription = stringResource(R.string.profile_description),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
@@ -84,60 +144,43 @@ fun TimelineScreen(
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = onCompose,
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
             ) {
                 Icon(Icons.Filled.Edit, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Compose")
+                Text(stringResource(R.string.compose_button))
             }
         }
     ) { paddingValues ->
         androidx.compose.material3.pulltorefresh.PullToRefreshBox(
             isRefreshing = isRefreshing,
-            onRefresh = { viewModel.loadTimeline() },
+            onRefresh = onRefresh,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = 80.dp) // Add bottom padding for FAB/Nav
+                contentPadding = PaddingValues(bottom = 80.dp)
             ) {
                 items(posts) { post ->
                     PostItem(
                         post = post,
-                        onPostClick = { postId ->
-                            nav.navigate(com.example.microcompose.ui.createPostDetailRoute(postId))
-                        },
+                        onPostClick = onPostClick,
                         onAvatarClick = { username ->
-                            nav.navigate(
-                                com.example.microcompose.ui.createProfileRoute(
-                                    username = username,
-                                    name = post.author?.name,
-                                    avatarUrl = post.author?.avatar
-                                )
-                            )
+                            onAvatarClick(username, post.author?.name, post.author?.avatar)
                         },
-                        onReplyClick = { postId, username ->
-                            nav.navigate(
-                                com.example.microcompose.ui.createComposeRoute(
-                                    replyToPostId = postId,
-                                    initialContent = "@$username "
-                                )
-                            )
-                        }
+                        onReplyClick = onReplyClick
                     )
-                    // Divider removed
                 }
             }
         }
     }
 }
 
-// Helper to format date
 fun formatRelativeTime(dateString: String, isSystem24Hour: Boolean): String {
     return try {
-        // Micro.blog usually returns ISO 8601, e.g., "2025-01-30T12:00:00+00:00" or similar
-        // We'll use Instant to be safe
         val instant = java.time.Instant.parse(dateString)
         val zoneId = java.time.ZoneId.systemDefault()
         val zdt = instant.atZone(zoneId)
@@ -152,7 +195,6 @@ fun formatRelativeTime(dateString: String, isSystem24Hour: Boolean): String {
              java.time.format.DateTimeFormatter.ofPattern("M/dd/yyyy").format(zdt)
         }
     } catch (e: Exception) {
-        // Fallback if parsing fails
         dateString.take(10)
     }
 }
@@ -162,102 +204,166 @@ fun PostItem(
     post: Post,
     onPostClick: (String) -> Unit = {},
     onAvatarClick: (String) -> Unit = {},
-    onReplyClick: (String, String) -> Unit = { _, _ -> }
+    onReplyClick: (String, String) -> Unit = { _, _ -> },
+    modifier: Modifier = Modifier
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val isSystem24Hour = android.text.format.DateFormat.is24HourFormat(context)
 
-    Column(
-        modifier = Modifier
+    Row(
+        modifier = modifier
             .fillMaxWidth()
-            .clickable { onPostClick(post.id) } // Make item clickable
-            .padding(vertical = 12.dp, horizontal = 16.dp) // Adjust vertical padding for denser list
+            .clickable { onPostClick(post.id) }
+            .padding(vertical = 12.dp, horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Row(modifier = Modifier.fillMaxWidth()) {
-            // Avatar
-            if (post.author?.avatar != null) {
-                AsyncImage(
-                    model = post.author.avatar,
-                    contentDescription = "Avatar",
-                    modifier = Modifier
-                        .size(42.dp) // Screenshot looks like ~42dp
-                        .clip(CircleShape)
-                        .clickable { post.author?.microblog?.username?.let(onAvatarClick) }, // Avatar click
-                    contentScale = ContentScale.Crop
+        AsyncImage(
+            model = post.author?.avatar,
+            contentDescription = stringResource(R.string.avatar_description),
+            modifier = Modifier
+                .size(42.dp)
+                .clip(CircleShape)
+                .clickable { post.author?.microblog?.username?.let(onAvatarClick) },
+            contentScale = ContentScale.Crop,
+            placeholder = ColorPainter(Color.Gray),
+            error = ColorPainter(Color.Gray)
+        )
+
+        Column(modifier = Modifier.weight(1f)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                val displayName = if (!post.author?.microblog?.username.isNullOrBlank()) {
+                    post.author?.microblog?.username
+                } else {
+                    post.author?.name
+                } ?: "Unknown"
+
+                Text(
+                    text = displayName,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
                 )
-            } else {
-                 // Fallback avatar
-                 Spacer(modifier = Modifier.size(42.dp))
+                Text(
+                    text = formatRelativeTime(post.datePublished, isSystem24Hour),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
 
-            Spacer(modifier = Modifier.width(16.dp)) // Spacing between avatar and content
+            Spacer(modifier = Modifier.height(2.dp))
 
-            // Content Column
-            Column(modifier = Modifier.weight(1f)) {
-                // Header Row (Name only)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.Top // Align to top of avatar
+            val cleanContent = Html.fromHtml(post.contentHtml ?: "", Html.FROM_HTML_MODE_COMPACT).toString().trim()
+            Text(
+                text = cleanContent,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
+                lineHeight = MaterialTheme.typography.bodyMedium.lineHeight * 1.1f
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(
+                    onClick = { 
+                        val username = post.author?.microblog?.username ?: ""
+                        onReplyClick(post.id, username)
+                    },
+                    modifier = Modifier.size(24.dp)
                 ) {
-                    Text(
-                        text = post.author?.name ?: "Unknown",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.weight(1f, fill = false)
+                    Icon(
+                        imageVector = Icons.Outlined.ChatBubbleOutline,
+                        contentDescription = "Reply",
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                     // Date removed from here
                 }
+                
+                Spacer(modifier = Modifier.width(16.dp))
 
-                Spacer(modifier = Modifier.height(2.dp)) // Tight spacing between name and text
-
-                // HTML Content
-                val cleanContent = Html.fromHtml(post.contentHtml ?: "", Html.FROM_HTML_MODE_COMPACT).toString().trim()
-                Text(
-                    text = cleanContent,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
-                    lineHeight = MaterialTheme.typography.bodyMedium.lineHeight * 1.1f // Better readability
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Footer Actions (Date, Reply, Bookmark)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween, // Space between Date and Actions
-                    verticalAlignment = Alignment.CenterVertically
+                IconButton(
+                    onClick = { /* TODO: Bookmark */ },
+                    modifier = Modifier.size(24.dp)
                 ) {
-                    // Date on the left
-                    Text(
-                        text = formatRelativeTime(post.datePublished, isSystem24Hour),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    Icon(
+                        imageVector = Icons.Outlined.BookmarkBorder,
+                        contentDescription = stringResource(R.string.bookmark_description),
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-
-                    // Actions on the right
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        IconButton(onClick = { post.author?.microblog?.username?.let { username -> onReplyClick(post.id, username) } }) {
-                             Icon(
-                                imageVector = androidx.compose.material.icons.Icons.AutoMirrored.Outlined.Reply,
-                                contentDescription = "Reply",
-                                modifier = Modifier.size(20.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        IconButton(onClick = { /* TODO: Bookmark */ }) {
-                            Icon(
-                                imageVector = Icons.Outlined.BookmarkBorder,
-                                contentDescription = "Bookmark",
-                                modifier = Modifier.size(20.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
                 }
             }
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PostItemPreview() {
+    MicroComposeTheme {
+        PostItem(
+            post = Post(
+                id = "1",
+                contentHtml = "The new Zelda is decently playable on the Steam Deck. Quite impressive! Curious to compare to playing on our OLED Switch. I prefer playing this series emulated, honestly.",
+                datePublished = "2025-01-30T12:30:00Z",
+                url = "https://example.com/1",
+                author = User(
+                    name = "Sean",
+                    url = "https://example.com/sean",
+                    avatar = null,
+                    microblog = UserMicroBlog(username = "sean@mastodon.social")
+                )
+            )
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun TimelineScreenPreview() {
+    val samplePosts = listOf(
+        Post(
+            id = "1",
+            contentHtml = "Hello Micro.blog from Jetpack Compose!",
+            datePublished = "2025-01-30T12:30:00Z",
+            url = "https://example.com/1",
+            author = User(
+                name = "Sean",
+                url = "https://example.com/sean",
+                avatar = null,
+                microblog = UserMicroBlog(username = "sean@mastodon.social")
+            )
+        ),
+        Post(
+            id = "2",
+            contentHtml = "This is another post in the timeline.",
+            datePublished = "2025-01-30T10:00:00Z",
+            url = "https://example.com/2",
+            author = User(
+                name = "Manton",
+                url = "https://example.com/manton",
+                avatar = null,
+                microblog = UserMicroBlog(username = "manton")
+            )
+        )
+    )
+
+    MicroComposeTheme {
+        TimelineContent(
+            posts = samplePosts,
+            isRefreshing = false,
+            onRefresh = {},
+            onCompose = {},
+            onPostClick = {},
+            onAvatarClick = { _, _, _ -> },
+            onReplyClick = { _, _ -> }
+        )
     }
 }

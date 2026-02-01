@@ -16,13 +16,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import com.example.microcompose.data.model.Post
+import com.example.microcompose.data.model.User
+import com.example.microcompose.data.model.UserMicroBlog
+import com.example.microcompose.ui.theme.MicroComposeTheme
 import com.example.microcompose.ui.timeline.PostItem
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MentionsScreen(
     nav: NavController,
@@ -31,6 +35,43 @@ fun MentionsScreen(
     val posts by viewModel.posts.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
 
+    MentionsContent(
+        posts = posts,
+        isRefreshing = isRefreshing,
+        onRefresh = { viewModel.loadMentions() },
+        onPostClick = { postId ->
+            nav.navigate(com.example.microcompose.ui.createPostDetailRoute(postId))
+        },
+        onAvatarClick = { username, name, avatarUrl ->
+            nav.navigate(
+                com.example.microcompose.ui.createProfileRoute(
+                    username = username,
+                    name = name,
+                    avatarUrl = avatarUrl
+                )
+            )
+        },
+        onReplyClick = { postId, username ->
+            nav.navigate(
+                com.example.microcompose.ui.createComposeRoute(
+                    replyToPostId = postId,
+                    initialContent = "@$username "
+                )
+            )
+        }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MentionsContent(
+    posts: List<Post>,
+    isRefreshing: Boolean,
+    onRefresh: () -> Unit,
+    onPostClick: (String) -> Unit,
+    onAvatarClick: (String, String?, String?) -> Unit,
+    onReplyClick: (String, String) -> Unit
+) {
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
 
     Scaffold(
@@ -48,7 +89,7 @@ fun MentionsScreen(
     ) { paddingValues ->
         androidx.compose.material3.pulltorefresh.PullToRefreshBox(
             isRefreshing = isRefreshing,
-            onRefresh = { viewModel.loadMentions() },
+            onRefresh = onRefresh,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
@@ -60,29 +101,44 @@ fun MentionsScreen(
                 items(posts) { post ->
                     PostItem(
                         post = post,
-                        onPostClick = { postId ->
-                            nav.navigate(com.example.microcompose.ui.createPostDetailRoute(postId))
-                        },
+                        onPostClick = onPostClick,
                         onAvatarClick = { username ->
-                            nav.navigate(
-                                com.example.microcompose.ui.createProfileRoute(
-                                    username = username,
-                                    name = post.author?.name,
-                                    avatarUrl = post.author?.avatar
-                                )
-                            )
+                            onAvatarClick(username, post.author?.name, post.author?.avatar)
                         },
-                        onReplyClick = { postId, username ->
-                            nav.navigate(
-                                com.example.microcompose.ui.createComposeRoute(
-                                    replyToPostId = postId,
-                                    initialContent = "@$username "
-                                )
-                            )
-                        }
+                        onReplyClick = onReplyClick
                     )
                 }
             }
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun MentionsScreenPreview() {
+    val samplePosts = listOf(
+        Post(
+            id = "1",
+            contentHtml = "Hello @sean, how are you?",
+            datePublished = "2025-01-30T12:30:00Z",
+            url = "https://example.com/1",
+            author = User(
+                name = "Manton",
+                url = "https://example.com/manton",
+                avatar = null,
+                microblog = UserMicroBlog(username = "manton")
+            )
+        )
+    )
+
+    MicroComposeTheme {
+        MentionsContent(
+            posts = samplePosts,
+            isRefreshing = false,
+            onRefresh = {},
+            onPostClick = {},
+            onAvatarClick = { _, _, _ -> },
+            onReplyClick = { _, _ -> }
+        )
     }
 }

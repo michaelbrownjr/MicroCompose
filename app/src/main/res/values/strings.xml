@@ -1,3 +1,10 @@
 <resources>
     <string name="app_name">MicroCompose</string>
+    <string name="home_title">Home</string>
+    <string name="menu_description">Menu</string>
+    <string name="profile_description">Profile</string>
+    <string name="compose_button">Compose</string>
+    <string name="reply_description">Reply</string>
+    <string name="bookmark_description">Bookmark</string>
+    <string name="avatar_description">Avatar</string>
 </resources>

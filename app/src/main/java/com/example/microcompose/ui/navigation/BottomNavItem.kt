@@ -5,11 +5,9 @@ import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.outlined.Chat
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.ui.graphics.vector.ImageVector
 
@@ -21,7 +19,7 @@ sealed class BottomNavItem(
 ) {
     data object Home : BottomNavItem(
         route = "home",
-        label = "Home", // Changed back to Home as requested
+        label = "Inbox",
         icon = Icons.Outlined.Home,
         selectedIcon = Icons.Filled.Home
     )

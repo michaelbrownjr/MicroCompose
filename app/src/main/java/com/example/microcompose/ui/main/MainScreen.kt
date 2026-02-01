@@ -1,4 +1,5 @@
 package com.example.microcompose.ui.main
+
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -11,17 +12,22 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.example.microcompose.data.model.Post
+import com.example.microcompose.data.model.User
+import com.example.microcompose.data.model.UserMicroBlog
 import com.example.microcompose.ui.AppDestinations
 import com.example.microcompose.ui.navigation.BottomNavItem
 import com.example.microcompose.ui.timeline.TimelineScreen
 import com.example.microcompose.ui.mentions.MentionsScreen
 import com.example.microcompose.ui.bookmarks.BookmarksScreen
 import com.example.microcompose.ui.discover.DiscoverScreen
+import com.example.microcompose.ui.theme.MicroComposeTheme
 
 @Composable
 fun MainScreen(
@@ -38,6 +44,21 @@ fun MainScreen(
         BottomNavItem.Discover
     )
 
+    MainScreenContent(
+        appNavController = appNavController,
+        mainNavController = mainNavController,
+        currentRoute = currentRoute,
+        items = items
+    )
+}
+
+@Composable
+private fun MainScreenContent(
+    appNavController: NavHostController,
+    mainNavController: NavHostController,
+    currentRoute: String?,
+    items: List<BottomNavItem>
+) {
     Scaffold(
         bottomBar = {
             NavigationBar {
@@ -53,16 +74,10 @@ fun MainScreen(
                         selected = currentRoute == item.route,
                         onClick = {
                             mainNavController.navigate(item.route) {
-                                // Pop up to the start destination of the graph to
-                                // avoid building up a large stack of destinations
-                                // on the back stack as users select items
                                 popUpTo(mainNavController.graph.startDestinationId) {
                                     saveState = true
                                 }
-                                // Avoid multiple copies of the same destination when
-                                // reselecting the same item
                                 launchSingleTop = true
-                                // Restore state when reselecting a previously selected item
                                 restoreState = true
                             }
                         }
@@ -101,5 +116,17 @@ fun MainScreen(
 fun PlaceholderScreen(title: String) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Text(text = "$title Screen (Coming Soon)")
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun MainScreenPreview() {
+    MicroComposeTheme {
+        // Mocking the behavior for preview by using a simple Box
+        // since NavHost and ViewModels (via hiltViewModel()) don't work in Preview.
+        Box(modifier = Modifier.fillMaxSize()) {
+            Text("Main Screen Preview", modifier = Modifier.align(Alignment.Center))
+        }
     }
 }

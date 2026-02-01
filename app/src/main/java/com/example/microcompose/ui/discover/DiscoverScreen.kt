@@ -16,13 +16,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import com.example.microcompose.data.model.Post
+import com.example.microcompose.data.model.User
+import com.example.microcompose.data.model.UserMicroBlog
+import com.example.microcompose.ui.theme.MicroComposeTheme
 import com.example.microcompose.ui.timeline.PostItem
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DiscoverScreen(
     nav: NavController,
@@ -31,6 +35,43 @@ fun DiscoverScreen(
     val posts by viewModel.posts.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
 
+    DiscoverContent(
+        posts = posts,
+        isRefreshing = isRefreshing,
+        onRefresh = { viewModel.loadDiscover() },
+        onPostClick = { postId ->
+            nav.navigate(com.example.microcompose.ui.createPostDetailRoute(postId))
+        },
+        onAvatarClick = { username, name, avatarUrl ->
+            nav.navigate(
+                com.example.microcompose.ui.createProfileRoute(
+                    username = username,
+                    name = name,
+                    avatarUrl = avatarUrl
+                )
+            )
+        },
+        onReplyClick = { postId, username ->
+            nav.navigate(
+                com.example.microcompose.ui.createComposeRoute(
+                    replyToPostId = postId,
+                    initialContent = "@$username "
+                )
+            )
+        }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DiscoverContent(
+    posts: List<Post>,
+    isRefreshing: Boolean,
+    onRefresh: () -> Unit,
+    onPostClick: (String) -> Unit,
+    onAvatarClick: (String, String?, String?) -> Unit,
+    onReplyClick: (String, String) -> Unit
+) {
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
 
     Scaffold(
@@ -48,7 +89,7 @@ fun DiscoverScreen(
     ) { paddingValues ->
         androidx.compose.material3.pulltorefresh.PullToRefreshBox(
             isRefreshing = isRefreshing,
-            onRefresh = { viewModel.loadDiscover() },
+            onRefresh = onRefresh,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
@@ -60,29 +101,44 @@ fun DiscoverScreen(
                 items(posts) { post ->
                     PostItem(
                         post = post,
-                        onPostClick = { postId ->
-                            nav.navigate(com.example.microcompose.ui.createPostDetailRoute(postId))
-                        },
+                        onPostClick = onPostClick,
                         onAvatarClick = { username ->
-                            nav.navigate(
-                                com.example.microcompose.ui.createProfileRoute(
-                                    username = username,
-                                    name = post.author?.name,
-                                    avatarUrl = post.author?.avatar
-                                )
-                            )
+                            onAvatarClick(username, post.author?.name, post.author?.avatar)
                         },
-                        onReplyClick = { postId, username ->
-                            nav.navigate(
-                                com.example.microcompose.ui.createComposeRoute(
-                                    replyToPostId = postId,
-                                    initialContent = "@$username "
-                                )
-                            )
-                        }
+                        onReplyClick = onReplyClick
                     )
                 }
             }
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun DiscoverScreenPreview() {
+    val samplePosts = listOf(
+        Post(
+            id = "1",
+            contentHtml = "Check out this new post in Discover!",
+            datePublished = "2025-01-30T12:30:00Z",
+            url = "https://example.com/1",
+            author = User(
+                name = "Sean",
+                url = "https://example.com/sean",
+                avatar = null,
+                microblog = UserMicroBlog(username = "sean@mastodon.social")
+            )
+        )
+    )
+
+    MicroComposeTheme {
+        DiscoverContent(
+            posts = samplePosts,
+            isRefreshing = false,
+            onRefresh = {},
+            onPostClick = {},
+            onAvatarClick = { _, _, _ -> },
+            onReplyClick = { _, _ -> }
+        )
     }
 }
