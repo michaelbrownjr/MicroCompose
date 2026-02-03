@@ -63,6 +63,7 @@ dependencies {
 
     // Hilt
     implementation(libs.hilt.android)
+    implementation(libs.androidx.compose.material3.adaptive.navigation.suite)
     ksp(libs.hilt.compiler)
 
     // Networking (Retrofit & OkHttp)

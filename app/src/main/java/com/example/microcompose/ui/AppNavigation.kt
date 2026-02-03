@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost // Keep existing imports
 import androidx.navigation.compose.composable
+import com.example.microcompose.ui.userposts.UserPostsScreen
 
 // Define routes
 object AppDestinations {
@@ -28,6 +29,7 @@ object AppDestinations {
     const val MAIN = "main"
     const val TIMELINE = "timeline"
     const val COMPOSE = "compose"
+    const val POSTS = "posts"
 
     const val PROFILE_ROUTE_BASE = "profile" // Base path
     const val PROFILE_USERNAME_ARG = "username" // Path argument (required)
@@ -91,6 +93,8 @@ fun AppNavigation(
 
         composable(AppDestinations.MAIN) { MainScreen(appNavController = navController) }
 
+        composable(AppDestinations.POSTS) { UserPostsScreen(navController = navController) }
+
         composable(
             route = AppDestinations.COMPOSE,
             // --- Custom Animation for Compose Screen (Example: Slide Up/Down) ---
@@ -117,12 +121,3 @@ fun AppNavigation(
         }
     }
 }
-
-//// Define items for the bottom navigation bar
-//sealed class BottomNavItem(val route: String, val icon: ImageVector, val label: String) {
-//    object Timeline : BottomNavItem(AppDestinations.TIMELINE, Icons.Filled.Home, "Timeline")
-//}
-//
-//val bottomNavItems = listOf(
-//    BottomNavItem.Timeline,
-//)
