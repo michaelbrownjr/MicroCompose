@@ -21,11 +21,11 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
-import com.example.microcompose.data.model.Post
-import com.example.microcompose.data.model.User
-import com.example.microcompose.data.model.UserMicroBlog
+import com.example.microcompose.ui.model.PostUI
+import com.example.microcompose.ui.model.AuthorUI
 import com.example.microcompose.ui.theme.MicroComposeTheme
 import com.example.microcompose.ui.timeline.PostItem
+import com.example.microcompose.ui.timeline.toPostUI
 
 @Composable
 fun DiscoverScreen(
@@ -36,15 +36,15 @@ fun DiscoverScreen(
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
 
     DiscoverContent(
-        posts = posts,
+        posts = posts.map { it.toPostUI() },
         isRefreshing = isRefreshing,
         onRefresh = { viewModel.loadDiscover() },
         onPostClick = { postId ->
-            nav.navigate(com.example.microcompose.ui.createPostDetailRoute(postId))
+            nav.navigate(route = com.example.microcompose.ui.createPostDetailRoute(postId))
         },
         onAvatarClick = { username, name, avatarUrl ->
             nav.navigate(
-                com.example.microcompose.ui.createProfileRoute(
+                route = com.example.microcompose.ui.createProfileRoute(
                     username = username,
                     name = name,
                     avatarUrl = avatarUrl
@@ -53,8 +53,8 @@ fun DiscoverScreen(
         },
         onReplyClick = { postId, username ->
             nav.navigate(
-                com.example.microcompose.ui.createComposeRoute(
-                    replyToPostId = postId,
+                route = com.example.microcompose.ui.createComposeRoute(
+                    replyTo = postId,
                     initialContent = "@$username "
                 )
             )
@@ -65,7 +65,7 @@ fun DiscoverScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DiscoverContent(
-    posts: List<Post>,
+    posts: List<PostUI>,
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
     onPostClick: (String) -> Unit,
@@ -103,7 +103,7 @@ private fun DiscoverContent(
                         post = post,
                         onPostClick = onPostClick,
                         onAvatarClick = { username ->
-                            onAvatarClick(username, post.author?.name, post.author?.avatar)
+                            onAvatarClick(username, post.author.name, post.author.avatar)
                         },
                         onReplyClick = onReplyClick
                     )
@@ -117,16 +117,15 @@ private fun DiscoverContent(
 @Composable
 fun DiscoverScreenPreview() {
     val samplePosts = listOf(
-        Post(
+        PostUI(
             id = "1",
-            contentHtml = "Check out this new post in Discover!",
+            html = "Check out this new post in Discover!",
             datePublished = "2025-01-30T12:30:00Z",
             url = "https://example.com/1",
-            author = User(
+            author = AuthorUI(
                 name = "Sean",
-                url = "https://example.com/sean",
-                avatar = null,
-                microblog = UserMicroBlog(username = "sean@mastodon.social")
+                username = "sean@mastodon.social",
+                avatar = ""
             )
         )
     )

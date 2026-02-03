@@ -27,15 +27,16 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.example.microcompose.ui.timeline.PostItem
+import com.example.microcompose.ui.timeline.toPostUI
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PostDetailScreen(
-    nav: NavController,
-    viewModel: PostDetailViewModel = hiltViewModel()
+    navController: NavController,
+    vm: PostDetailViewModel = hiltViewModel()
 ) {
-    val conversation by viewModel.conversation.collectAsStateWithLifecycle()
-    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
+    val conversation by vm.conversation.collectAsStateWithLifecycle()
+    val isLoading by vm.isLoading.collectAsStateWithLifecycle()
 
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
 
@@ -45,7 +46,7 @@ fun PostDetailScreen(
             CenterAlignedTopAppBar(
                 title = { Text("Conversation") },
                 navigationIcon = {
-                    IconButton(onClick = { nav.popBackStack() }) {
+                    IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
@@ -70,15 +71,15 @@ fun PostDetailScreen(
                 ) {
                     items(conversation) { post ->
                         PostItem(
-                            post = post,
+                            post = post.toPostUI(),
                             onPostClick = { clickedPostId ->
-                                if (clickedPostId != viewModel.postId) {
-                                    nav.navigate(com.example.microcompose.ui.createPostDetailRoute(clickedPostId))
+                                if (clickedPostId != vm.postId) {
+                                    navController.navigate(route = com.example.microcompose.ui.createPostDetailRoute(clickedPostId))
                                 }
                             },
                             onAvatarClick = { username ->
-                                nav.navigate(
-                                    com.example.microcompose.ui.createProfileRoute(
+                                navController.navigate(
+                                    route = com.example.microcompose.ui.createProfileRoute(
                                         username = username,
                                         name = post.author?.name,
                                         avatarUrl = post.author?.avatar
@@ -86,9 +87,9 @@ fun PostDetailScreen(
                                 )
                             },
                             onReplyClick = { postId, username ->
-                                nav.navigate(
-                                    com.example.microcompose.ui.createComposeRoute(
-                                        replyToPostId = postId,
+                                navController.navigate(
+                                    route = com.example.microcompose.ui.createComposeRoute(
+                                        replyTo = postId,
                                         initialContent = "@$username "
                                     )
                                 )

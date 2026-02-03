@@ -6,6 +6,7 @@ import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.POST
 import retrofit2.http.Query
+import retrofit2.http.Field
 
 interface MicroBlogApi {
 
@@ -45,9 +46,9 @@ interface MicroBlogApi {
     @POST("micropub")
     suspend fun createPost(
         @Header("Authorization") token: String,
-        @retrofit2.http.Field("h") h: String = "entry",
-        @retrofit2.http.Field("content") content: String,
-        @retrofit2.http.Field("in-reply-to") inReplyTo: String? = null
+        @Field("h") h: String = "entry",
+        @Field("content") content: String,
+        @Field("in-reply-to") inReplyTo: String? = null
     ): retrofit2.Response<Unit>
            // Ideally we check docs, but for now returning Any/Response is safer or handling 202.
            // The docs say "Micro.blog will return the final published URL for the post... and in the JSON body...".
@@ -63,6 +64,20 @@ interface MicroBlogApi {
     @POST("account/verify")
     suspend fun verifyToken(
         @Header("Authorization") token: String
+    ): com.example.microcompose.ui.data.VerifiedUser
+    
+    @retrofit2.http.FormUrlEncoded
+    @POST("account/signin")
+    suspend fun signIn(
+        @Field("email") email: String,
+        @Field("app_name") appName: String = "MicroCompose",
+        @Field("redirect_url") redirectUrl: String = "microcompose://signin/"
+    ): retrofit2.Response<Unit>
+
+    @retrofit2.http.FormUrlEncoded
+    @POST("account/verify")
+    suspend fun verify(
+        @Field("token") token: String
     ): com.example.microcompose.ui.data.VerifiedUser
 }
 

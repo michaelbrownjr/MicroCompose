@@ -13,6 +13,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
@@ -32,7 +33,19 @@ fun AdaptiveNavigation(
     val currentRoute = navBackStackEntry?.destination?.route
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
-    val avatarUrl by viewModel.avatarUrl.collectAsState()
+    val avatarUrl by viewModel.avatarUrl.collectAsState(initial = null)
+    val navigateToLogin by viewModel.navigateToLogin.collectAsState()
+
+    if (navigateToLogin) {
+        LaunchedEffect(Unit) {
+            navController.navigate(AppDestinations.LOGIN) {
+                popUpTo(navController.graph.id) {
+                    inclusive = true
+                }
+            }
+            viewModel.onLoginNavigated()
+        }
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -41,7 +54,9 @@ fun AdaptiveNavigation(
                 DrawerContent(
                     avatarUrl = avatarUrl,
                     onItemSelected = {
-                        // TODO: Implement navigation for drawer items
+                        if (it == AppDestinations.LOGOUT) {
+                            viewModel.logout()
+                        }
                         scope.launch {
                             drawerState.close()
                         }

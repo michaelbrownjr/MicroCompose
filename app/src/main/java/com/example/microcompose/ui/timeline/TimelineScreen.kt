@@ -3,7 +3,6 @@ package com.example.microcompose.ui.timeline
 import android.text.Html
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -51,15 +50,15 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.microcompose.R
-import com.example.microcompose.data.model.Post
-import com.example.microcompose.data.model.User
-import com.example.microcompose.data.model.UserMicroBlog
+import com.example.microcompose.ui.model.PostUI
+import com.example.microcompose.ui.model.AuthorUI
 import com.example.microcompose.ui.theme.MicroComposeTheme
 
 @Composable
 fun TimelineScreen(
     nav: NavController,
     onCompose: () -> Unit,
+    onMenuClick: () -> Unit = {}, // Added onMenuClick parameter
     viewModel: TimelineViewModel = hiltViewModel()
 ) {
     val posts by viewModel.posts.collectAsStateWithLifecycle()
@@ -70,12 +69,13 @@ fun TimelineScreen(
         isRefreshing = isRefreshing,
         onRefresh = { viewModel.loadTimeline() },
         onCompose = onCompose,
+        onMenuClick = onMenuClick, // Pass it down
         onPostClick = { postId ->
-            nav.navigate(com.example.microcompose.ui.createPostDetailRoute(postId))
+            nav.navigate(route = com.example.microcompose.ui.createPostDetailRoute(postId))
         },
         onAvatarClick = { username, name, avatarUrl ->
             nav.navigate(
-                com.example.microcompose.ui.createProfileRoute(
+                route = com.example.microcompose.ui.createProfileRoute(
                     username = username,
                     name = name,
                     avatarUrl = avatarUrl
@@ -84,8 +84,8 @@ fun TimelineScreen(
         },
         onReplyClick = { postId, username ->
             nav.navigate(
-                com.example.microcompose.ui.createComposeRoute(
-                    replyToPostId = postId,
+                route = com.example.microcompose.ui.createComposeRoute(
+                    replyTo = postId,
                     initialContent = "@$username "
                 )
             )
@@ -96,10 +96,11 @@ fun TimelineScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TimelineContent(
-    posts: List<Post>,
+    posts: List<PostUI>,
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
     onCompose: () -> Unit,
+    onMenuClick: () -> Unit, // Added parameter
     onPostClick: (String) -> Unit,
     onAvatarClick: (String, String?, String?) -> Unit,
     onReplyClick: (String, String) -> Unit
@@ -117,7 +118,7 @@ private fun TimelineContent(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = { /* TODO: Open Drawer */ }) {
+                    IconButton(onClick = onMenuClick) { // Use the callback
                         Icon(
                             imageVector = Icons.Filled.Menu,
                             contentDescription = stringResource(R.string.menu_description),
@@ -169,7 +170,7 @@ private fun TimelineContent(
                         post = post,
                         onPostClick = onPostClick,
                         onAvatarClick = { username ->
-                            onAvatarClick(username, post.author?.name, post.author?.avatar)
+                            onAvatarClick(username, post.author.name, post.author.avatar)
                         },
                         onReplyClick = onReplyClick
                     )
@@ -201,7 +202,7 @@ fun formatRelativeTime(dateString: String, isSystem24Hour: Boolean): String {
 
 @Composable
 fun PostItem(
-    post: Post,
+    post: PostUI,
     onPostClick: (String) -> Unit = {},
     onAvatarClick: (String) -> Unit = {},
     onReplyClick: (String, String) -> Unit = { _, _ -> },
@@ -218,12 +219,12 @@ fun PostItem(
         horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         AsyncImage(
-            model = post.author?.avatar,
+            model = post.author.avatar,
             contentDescription = stringResource(R.string.avatar_description),
             modifier = Modifier
                 .size(42.dp)
                 .clip(CircleShape)
-                .clickable { post.author?.microblog?.username?.let(onAvatarClick) },
+                .clickable { onAvatarClick(post.author.username) },
             contentScale = ContentScale.Crop,
             placeholder = ColorPainter(Color.Gray),
             error = ColorPainter(Color.Gray)
@@ -235,11 +236,11 @@ fun PostItem(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                val displayName = if (!post.author?.microblog?.username.isNullOrBlank()) {
-                    post.author?.microblog?.username
+                val displayName = if (!post.author.username.isBlank()) {
+                    post.author.username
                 } else {
-                    post.author?.name
-                } ?: "Unknown"
+                    post.author.name
+                }
 
                 Text(
                     text = displayName,
@@ -258,7 +259,7 @@ fun PostItem(
 
             Spacer(modifier = Modifier.height(2.dp))
 
-            val cleanContent = Html.fromHtml(post.contentHtml ?: "", Html.FROM_HTML_MODE_COMPACT).toString().trim()
+            val cleanContent = Html.fromHtml(post.html, Html.FROM_HTML_MODE_COMPACT).toString().trim()
             Text(
                 text = cleanContent,
                 style = MaterialTheme.typography.bodyMedium,
@@ -273,7 +274,7 @@ fun PostItem(
             ) {
                 IconButton(
                     onClick = { 
-                        val username = post.author?.microblog?.username ?: ""
+                        val username = post.author.username
                         onReplyClick(post.id, username)
                     },
                     modifier = Modifier.size(24.dp)
@@ -309,16 +310,15 @@ fun PostItem(
 fun PostItemPreview() {
     MicroComposeTheme {
         PostItem(
-            post = Post(
+            post = PostUI(
                 id = "1",
-                contentHtml = "The new Zelda is decently playable on the Steam Deck. Quite impressive! Curious to compare to playing on our OLED Switch. I prefer playing this series emulated, honestly.",
+                html = "The new Zelda is decently playable on the Steam Deck. Quite impressive! Curious to compare to playing on our OLED Switch. I prefer playing this series emulated, honestly.",
                 datePublished = "2025-01-30T12:30:00Z",
                 url = "https://example.com/1",
-                author = User(
+                author = AuthorUI(
                     name = "Sean",
-                    url = "https://example.com/sean",
-                    avatar = null,
-                    microblog = UserMicroBlog(username = "sean@mastodon.social")
+                    username = "sean@mastodon.social",
+                    avatar = ""
                 )
             )
         )
@@ -329,28 +329,26 @@ fun PostItemPreview() {
 @Composable
 fun TimelineScreenPreview() {
     val samplePosts = listOf(
-        Post(
+        PostUI(
             id = "1",
-            contentHtml = "Hello Micro.blog from Jetpack Compose!",
+            html = "Hello Micro.blog from Jetpack Compose!",
             datePublished = "2025-01-30T12:30:00Z",
             url = "https://example.com/1",
-            author = User(
+            author = AuthorUI(
                 name = "Sean",
-                url = "https://example.com/sean",
-                avatar = null,
-                microblog = UserMicroBlog(username = "sean@mastodon.social")
+                username = "sean@mastodon.social",
+                avatar = ""
             )
         ),
-        Post(
+        PostUI(
             id = "2",
-            contentHtml = "This is another post in the timeline.",
+            html = "This is another post in the timeline.",
             datePublished = "2025-01-30T10:00:00Z",
             url = "https://example.com/2",
-            author = User(
+            author = AuthorUI(
                 name = "Manton",
-                url = "https://example.com/manton",
-                avatar = null,
-                microblog = UserMicroBlog(username = "manton")
+                username = "manton",
+                avatar = ""
             )
         )
     )
@@ -361,6 +359,7 @@ fun TimelineScreenPreview() {
             isRefreshing = false,
             onRefresh = {},
             onCompose = {},
+            onMenuClick = {},
             onPostClick = {},
             onAvatarClick = { _, _, _ -> },
             onReplyClick = { _, _ -> }

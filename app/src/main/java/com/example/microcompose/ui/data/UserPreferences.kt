@@ -20,15 +20,15 @@ class UserPreferences(private val context: Context) {
 
     /* ---------- WRITE ---------- */
 
-    suspend fun saveToken(token: String) {
+    suspend fun saveToken(token: String?) {
         context.dataStore.edit { prefs ->
-            prefs[PreferencesKeys.AUTH_TOKEN] = token // Uses imported PreferencesKeys
+            prefs[PreferencesKeys.AUTH_TOKEN] = token as String // Uses imported PreferencesKeys
         }
     }
 
-    suspend fun saveUsername(username: String) {
+    suspend fun saveUsername(username: String?) {
         context.dataStore.edit { prefs ->
-            prefs[PreferencesKeys.USERNAME] = username // Uses imported PreferencesKeys
+            prefs[PreferencesKeys.USERNAME] = username as String // Uses imported PreferencesKeys
         }
     }
 

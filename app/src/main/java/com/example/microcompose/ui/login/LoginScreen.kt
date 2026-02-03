@@ -1,5 +1,6 @@
 package com.example.microcompose.ui.login
 
+import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -14,7 +15,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -24,24 +24,39 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.example.microcompose.ui.AppDestinations
 
+private const val TAG = "LoginScreen"
+
 @Composable
 fun LoginScreen(
     nav: NavController,
-    vm: AuthViewModel
+    vm: LoginViewModel = hiltViewModel(),
+    deepLinkToken: String? = null
 ) {
-    // Keep it simple: Enter Token -> Login
-    var token by remember { mutableStateOf("") }
-    val uiState by vm.state.collectAsStateWithLifecycle()
+    var email by remember { mutableStateOf("") }
+    val uiState by vm.uiState.collectAsStateWithLifecycle()
+
+    LaunchedEffect(deepLinkToken) {
+        Log.d(TAG, "LoginScreen composed with token: $deepLinkToken")
+        if (!deepLinkToken.isNullOrEmpty()) {
+            // This calls the verify function in your VM
+            Log.d(TAG, "Calling vm.verify with token")
+            vm.verify(deepLinkToken)
+        }
+    }
 
     LaunchedEffect(uiState) {
-        if (uiState is AuthState.Authed) {
+        Log.d(TAG, "UI State changed: $uiState")
+        if (uiState is LoginUiState.Success) {
+            Log.d(TAG, "Navigating to MAIN")
             nav.navigate(AppDestinations.MAIN) {
-                popUpTo(AppDestinations.LOGIN) { inclusive = true }
+                popUpTo(AppDestinations.LOGIN_ROUTE) { inclusive = true }
             }
         }
     }
@@ -56,41 +71,54 @@ fun LoginScreen(
             verticalArrangement = Arrangement.Center
         ) {
             Text(
-                text = "Micro.blog Login",
+                text = "Micro.blog Sign In",
                 style = MaterialTheme.typography.headlineLarge
             )
             
             Spacer(modifier = Modifier.height(32.dp))
 
-            OutlinedTextField(
-                value = token,
-                onValueChange = { token = it },
-                label = { Text("App Token") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)
-            )
+            when (uiState) {
+                LoginUiState.Idle, is LoginUiState.Error -> {
+                    OutlinedTextField(
+                        value = email,
+                        onValueChange = { email = it },
+                        label = { Text("Email") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Email,
+                            imeAction = ImeAction.Go
+                        )
+                    )
 
-            Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
-            if (uiState is AuthState.Loading) {
-                CircularProgressIndicator()
-            } else {
-                Button(
-                    onClick = {
-                        vm.verify(token)
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = token.isNotBlank()
-                ) {
-                    Text("Login")
+                    Button(
+                        onClick = { vm.requestSignIn(email) },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = email.isNotBlank()
+                    ) {
+                        Text("Sign In")
+                    }
+                }
+                LoginUiState.Loading -> {
+                    CircularProgressIndicator()
+                }
+                LoginUiState.EmailSent -> {
+                    Text(
+                        "Check your email for a sign-in link.",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                }
+                LoginUiState.Success -> {
+                    // This state is handled by the LaunchedEffect
                 }
             }
             
-            if (uiState is AuthState.Error) {
+            if (uiState is LoginUiState.Error) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = (uiState as AuthState.Error).msg,
+                    text = (uiState as LoginUiState.Error).message,
                     color = MaterialTheme.colorScheme.error
                 )
             }

@@ -24,6 +24,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.microcompose.ui.timeline.PostItem
+import com.example.microcompose.ui.timeline.toPostUI
 import kotlinx.coroutines.launch
 
 
@@ -151,13 +152,13 @@ fun ProfileScreen(
                         } else {
                             items(posts, key = { "post_${it.id}" }) { post -> // Ensure unique keys
                                 PostItem(
-                                    post = post,
+                                    post = post.toPostUI(),
                                     onPostClick = { postId ->
-                                        navController.navigate(com.example.microcompose.ui.createPostDetailRoute(postId))
+                                        navController.navigate(route = com.example.microcompose.ui.createPostDetailRoute(postId))
                                     },
                                     onAvatarClick = { username ->
                                         navController.navigate(
-                                            com.example.microcompose.ui.createProfileRoute(
+                                            route = com.example.microcompose.ui.createProfileRoute(
                                                 username = username,
                                                 name = post.author?.name,
                                                 avatarUrl = post.author?.avatar
@@ -166,8 +167,8 @@ fun ProfileScreen(
                                     },
                                     onReplyClick = { postId, username ->
                                         navController.navigate(
-                                            com.example.microcompose.ui.createComposeRoute(
-                                                replyToPostId = postId,
+                                            route = com.example.microcompose.ui.createComposeRoute(
+                                                replyTo = postId,
                                                 initialContent = "@$username "
                                             )
                                         )

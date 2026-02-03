@@ -9,7 +9,7 @@ data class VerifiedUser(
     @SerialName("name") // Maps JSON key "full_name" to this variable
     @com.google.gson.annotations.SerializedName("name")
     val fullName: String? = null,
-    val avatar: String? = null,
+    val avatar: String,
     val token: String? = null, // This is the permanent auth token
     @SerialName("has_site")
     @com.google.gson.annotations.SerializedName("has_site")

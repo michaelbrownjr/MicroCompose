@@ -36,6 +36,28 @@ class AppRepository @Inject constructor(
 
     private val api = retrofit.create(MicroBlogApi::class.java)
 
+    suspend fun signIn(email: String): Result<Unit> {
+        return try {
+            val response = api.signIn(email)
+            if (response.isSuccessful) {
+                Result.success(Unit)
+            } else {
+                Result.failure(retrofit2.HttpException(response))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun verify(token: String): Result<com.example.microcompose.ui.data.VerifiedUser> {
+        return try {
+            val response = api.verify(token)
+            Result.success(response)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun verifyToken(token: String): Result<com.example.microcompose.ui.data.VerifiedUser> {
         return try {
             val response = api.verifyToken("Bearer $token")

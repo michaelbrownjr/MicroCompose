@@ -9,7 +9,7 @@ plugins {
 
 android {
     namespace = "com.example.microcompose"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.microcompose"
@@ -70,7 +70,7 @@ dependencies {
     implementation(libs.retrofit.core)
     implementation(libs.retrofit.converter.gson)
     implementation(libs.okhttp.core) // Explicitly include okhttp
-    implementation(libs.okhttp.logging)
+    implementation(libs.okhttp.logging.interceptor)
 
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)
@@ -86,9 +86,6 @@ dependencies {
 
     // Testing
     testImplementation(libs.junit)
-    testImplementation(libs.mockwebserver)
-    testImplementation(libs.mockk)
-    testImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.androidx.test.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom)) // BOM for testing too

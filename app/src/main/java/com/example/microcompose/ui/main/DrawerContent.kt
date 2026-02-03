@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Help
+import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material3.Icon
@@ -83,6 +84,12 @@ fun DrawerContent(
             label = { Text("Add Account") },
             selected = false,
             onClick = { onItemSelected("add_account") }
+        )
+        NavigationDrawerItem(
+            icon = { Icon(Icons.Filled.Logout, contentDescription = "Logout") },
+            label = { Text("Logout") },
+            selected = false,
+            onClick = { onItemSelected(AppDestinations.LOGOUT) }
         )
     }
 }

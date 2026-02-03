@@ -1,35 +1,43 @@
 package com.example.microcompose.ui
 
+import android.util.Log
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.IntOffset
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavHostController
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
+import androidx.navigation.navDeepLink
 import com.example.microcompose.ui.compose.ComposeScreen
 import com.example.microcompose.ui.login.LoginScreen
 import com.example.microcompose.ui.main.MainScreen
+import com.example.microcompose.ui.postdetail.PostDetailScreen
 import com.example.microcompose.ui.profile.ProfileScreen
 import com.example.microcompose.ui.profile.ProfileViewModel
+import com.example.microcompose.ui.userposts.UserPostsScreen
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
-import androidx.compose.animation.core.tween // For customizing animation speed
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.slideInVertically // Import vertical slide
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.IntOffset
-import androidx.navigation.NavHostController
-import androidx.navigation.compose.NavHost // Keep existing imports
-import androidx.navigation.compose.composable
-import com.example.microcompose.ui.userposts.UserPostsScreen
 
 // Define routes
 object AppDestinations {
     const val LOGIN = "login"
+    const val LOGIN_ROUTE = "$LOGIN?token={token}"
     const val MAIN = "main"
     const val TIMELINE = "timeline"
     const val COMPOSE = "compose"
     const val POSTS = "posts"
+    const val LOGOUT = "logout"
 
     const val PROFILE_ROUTE_BASE = "profile" // Base path
     const val PROFILE_USERNAME_ARG = "username" // Path argument (required)
@@ -40,17 +48,20 @@ object AppDestinations {
         "$PROFILE_ROUTE_BASE/{$PROFILE_USERNAME_ARG}?" +
                 "$PROFILE_NAME_ARG={$PROFILE_NAME_ARG}&" +
                 "$PROFILE_AVATAR_ARG={$PROFILE_AVATAR_ARG}"
-    // Add other destinations like Settings if needed
 
+    const val POST_DETAIL_ROUTE_BASE = "post"
+    const val POST_ID_ARG = "postId"
+    const val POST_DETAIL_ROUTE_TEMPLATE = "$POST_DETAIL_ROUTE_BASE/{$POST_ID_ARG}"
+
+    const val COMPOSE_REPLY_TO_ARG = "replyTo"
+    const val COMPOSE_INITIAL_CONTENT_ARG = "initialContent"
+    const val COMPOSE_WITH_ARGS_ROUTE_TEMPLATE = "$COMPOSE?" +
+            "$COMPOSE_REPLY_TO_ARG={$COMPOSE_REPLY_TO_ARG}&" +
+            "$COMPOSE_INITIAL_CONTENT_ARG={$COMPOSE_INITIAL_CONTENT_ARG}"
 }
 
 // --- Navigation Helper Function ---
-/**
- * Creates the navigation route string for the Profile screen,
- * properly encoding arguments.
- */
 fun createProfileRoute(username: String, name: String?, avatarUrl: String?): String {
-    // URL encode optional parameters to handle special characters safely
     val encodedName = URLEncoder.encode(name ?: "", StandardCharsets.UTF_8.toString())
     val encodedAvatar = URLEncoder.encode(avatarUrl ?: "", StandardCharsets.UTF_8.toString())
     return "${AppDestinations.PROFILE_ROUTE_BASE}/$username?" +
@@ -58,66 +69,101 @@ fun createProfileRoute(username: String, name: String?, avatarUrl: String?): Str
             "${AppDestinations.PROFILE_AVATAR_ARG}=$encodedAvatar"
 }
 
+fun createPostDetailRoute(postId: String): String {
+    return "${AppDestinations.POST_DETAIL_ROUTE_BASE}/$postId"
+}
+
+fun createComposeRoute(replyTo: String?, initialContent: String?): String {
+    val encodedReplyTo = URLEncoder.encode(replyTo ?: "", StandardCharsets.UTF_8.toString())
+    val encodedInitialContent = URLEncoder.encode(initialContent ?: "", StandardCharsets.UTF_8.toString())
+    return "${AppDestinations.COMPOSE}?" +
+            "${AppDestinations.COMPOSE_REPLY_TO_ARG}=$encodedReplyTo&" +
+            "${AppDestinations.COMPOSE_INITIAL_CONTENT_ARG}=$encodedInitialContent"
+}
+
+
 @Composable
 fun AppNavigation(
-    modifier: Modifier = Modifier, // Pass modifier
+    modifier: Modifier = Modifier,
     navController: NavHostController,
     startDestination: String,
+    deepLinkToken: String?,
+    onDeepLinkTokenConsumed: () -> Unit
 ) {
-    // Define animation spec if desired (e.g., duration)
-    val animationSpec = tween<IntOffset>(durationMillis = 350) // Example: 300ms tween
+    val animationSpec = tween<IntOffset>(durationMillis = 350)
     val fadeSpec = tween<Float>(durationMillis = 350)
+
+    // Effect to handle the deep link token passed from the Activity
+    LaunchedEffect(deepLinkToken) {
+        if (deepLinkToken != null) {
+            Log.d("AppNavigation", "Deep link token received, navigating: $deepLinkToken")
+            // Navigate to the login screen with the token as an argument
+            navController.navigate("${AppDestinations.LOGIN}?token=$deepLinkToken")
+            // Consume the token so this doesn't run again on recomposition
+            onDeepLinkTokenConsumed()
+        }
+    }
 
     NavHost(
         navController = navController,
         startDestination = startDestination,
-        modifier = modifier, // Apply modifier here
-
-        // --- Default Screen Transitions ---
-        enterTransition = { // When entering a screen (forward navigation)
-            slideInHorizontally(initialOffsetX = { it }, animationSpec = animationSpec) + fadeIn(fadeSpec)
-        },
-        exitTransition = { // When leaving a screen (forward navigation)
-            slideOutHorizontally(targetOffsetX = { -it / 3 }, animationSpec = animationSpec) + fadeOut(fadeSpec) // Slight fade/slide out
-        },
-        popEnterTransition = { // When returning to a screen (back navigation)
-            slideInHorizontally(initialOffsetX = { -it / 3 }, animationSpec = animationSpec) + fadeIn(fadeSpec) // Slight slide/fade in
-        },
-        popExitTransition = { // When leaving a screen via back navigation
-            slideOutHorizontally(targetOffsetX = { it }, animationSpec = animationSpec) + fadeOut(fadeSpec)
-        }
-        // --- End Default Transitions ---
-
+        modifier = modifier,
+        enterTransition = { slideInHorizontally(initialOffsetX = { it }, animationSpec = animationSpec) + fadeIn(fadeSpec) },
+        exitTransition = { slideOutHorizontally(targetOffsetX = { -it / 3 }, animationSpec = animationSpec) + fadeOut(fadeSpec) },
+        popEnterTransition = { slideInHorizontally(initialOffsetX = { -it / 3 }, animationSpec = animationSpec) + fadeIn(fadeSpec) },
+        popExitTransition = { slideOutHorizontally(targetOffsetX = { it }, animationSpec = animationSpec) + fadeOut(fadeSpec) }
     ) {
-        composable(AppDestinations.LOGIN) { LoginScreen(nav = navController, vm = hiltViewModel()) }
-
+        composable(
+            route = AppDestinations.LOGIN_ROUTE,
+            arguments = listOf(
+                navArgument("token") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            ),
+            // This is now a fallback. Primary handling is in the Activity via LaunchedEffect.
+            deepLinks = listOf(
+                navDeepLink {
+                    uriPattern = "microcompose://signin/{token}"
+                    action = android.content.Intent.ACTION_VIEW
+                }
+            )
+        ) { backStackEntry ->
+            val token = backStackEntry.arguments?.getString("token")
+            LoginScreen(
+                nav = navController,
+                vm = hiltViewModel(),
+                deepLinkToken = token
+            )
+        }
+        
         composable(AppDestinations.MAIN) { MainScreen(appNavController = navController) }
-
         composable(AppDestinations.POSTS) { UserPostsScreen(navController = navController) }
 
         composable(
-            route = AppDestinations.COMPOSE,
-            // --- Custom Animation for Compose Screen (Example: Slide Up/Down) ---
+            route = AppDestinations.COMPOSE_WITH_ARGS_ROUTE_TEMPLATE,
             enterTransition = { slideInVertically(initialOffsetY = { it }, animationSpec = animationSpec) + fadeIn(fadeSpec) },
-            exitTransition = { fadeOut(fadeSpec) }, // Fade out when navigating forward from it
+            exitTransition = { fadeOut(fadeSpec) },
             popExitTransition = { slideOutVertically(targetOffsetY = { it }, animationSpec = animationSpec) + fadeOut(fadeSpec) }
-            // popEnterTransition will use NavHost default (slide in from left) - maybe customize if needed?
-            // --- End Custom Animation ---
         ) {
             ComposeScreen(
                 nav = navController,
-                onPosted = { navController.popBackStack() } // Go back after posting
+                onPosted = { navController.popBackStack() }
             )
         }
 
         composable(
-            route = AppDestinations.PROFILE_ROUTE_TEMPLATE,
-            arguments = listOf( /* ... your navArguments ... */ )
-            // Use default NavHost horizontal slide animations here
-        ) { backStackEntry ->
-            // If ProfileViewModel requires arguments from SavedStateHandle, get it here:
-            val profileVM: ProfileViewModel = hiltViewModel() // Use Hilt VM
+            route = AppDestinations.PROFILE_ROUTE_TEMPLATE
+        ) {
+            val profileVM: ProfileViewModel = hiltViewModel()
             ProfileScreen(vm = profileVM, navController = navController)
+        }
+
+        composable(
+            route = AppDestinations.POST_DETAIL_ROUTE_TEMPLATE
+        ) {
+            PostDetailScreen(navController = navController, vm = hiltViewModel())
         }
     }
 }
