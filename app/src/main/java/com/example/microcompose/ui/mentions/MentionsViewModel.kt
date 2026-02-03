@@ -1,4 +1,4 @@
-package com.example.microcompose.ui.timeline
+package com.example.microcompose.ui.mentions
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -12,7 +12,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class TimelineViewModel @Inject constructor(
+class MentionsViewModel @Inject constructor(
     private val repository: AppRepository
 ) : ViewModel() {
 
@@ -23,14 +23,14 @@ class TimelineViewModel @Inject constructor(
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
 
     init {
-        loadTimeline()
+        loadMentions()
     }
 
-    fun loadTimeline() {
+    fun loadMentions() {
         viewModelScope.launch {
             _isRefreshing.value = true
             try {
-                _posts.value = repository.getTimeline()
+                _posts.value = repository.getMentions()
             } finally {
                 _isRefreshing.value = false
             }

@@ -277,10 +277,10 @@ fun MicroComposeTheme(
         SideEffect {
             val window = (view.context as? Activity)?.window
             if (window != null) { // Check if window is not null
-                // Set status bar color to match background (optional, can be transparent)
-                window.statusBarColor = colorScheme.background.toArgb()
-                // Set navigation bar color (optional)
-                // window.navigationBarColor = colorScheme.background.toArgb()
+                // Set status bar color to transparent for edge-to-edge
+                window.statusBarColor = Color.Transparent.toArgb()
+                // Set navigation bar color to transparent
+                window.navigationBarColor = Color.Transparent.toArgb()
 
                 // Get the controller for system bars
                 val insetsController = WindowCompat.getInsetsController(window, view)

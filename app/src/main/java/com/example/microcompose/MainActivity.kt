@@ -22,11 +22,14 @@ import com.example.microcompose.ui.login.AuthViewModel
 import com.example.microcompose.ui.theme.MicroComposeTheme
 import dagger.hilt.android.AndroidEntryPoint
 
+import androidx.activity.enableEdgeToEdge
+
 @AndroidEntryPoint // Keep this annotation
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
         Log.d("MainActivity", "onCreate Intent: ${intent?.action} Data: ${intent?.data}")
 
         setContent {
