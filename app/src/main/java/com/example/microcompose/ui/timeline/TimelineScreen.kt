@@ -58,7 +58,7 @@ import com.example.microcompose.ui.theme.MicroComposeTheme
 fun TimelineScreen(
     nav: NavController,
     onCompose: () -> Unit,
-    onMenuClick: () -> Unit = {}, // Added onMenuClick parameter
+    onMenuClick: () -> Unit,
     viewModel: TimelineViewModel = hiltViewModel()
 ) {
     val posts by viewModel.posts.collectAsStateWithLifecycle()
@@ -69,7 +69,7 @@ fun TimelineScreen(
         isRefreshing = isRefreshing,
         onRefresh = { viewModel.loadTimeline() },
         onCompose = onCompose,
-        onMenuClick = onMenuClick, // Pass it down
+        onMenuClick = onMenuClick,
         onPostClick = { postId ->
             nav.navigate(route = com.example.microcompose.ui.createPostDetailRoute(postId))
         },
@@ -100,7 +100,7 @@ private fun TimelineContent(
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
     onCompose: () -> Unit,
-    onMenuClick: () -> Unit, // Added parameter
+    onMenuClick: () -> Unit,
     onPostClick: (String) -> Unit,
     onAvatarClick: (String, String?, String?) -> Unit,
     onReplyClick: (String, String) -> Unit
@@ -118,7 +118,7 @@ private fun TimelineContent(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = onMenuClick) { // Use the callback
+                    IconButton(onClick = onMenuClick) {
                         Icon(
                             imageVector = Icons.Filled.Menu,
                             contentDescription = stringResource(R.string.menu_description),

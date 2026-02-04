@@ -52,7 +52,6 @@ fun AdaptiveNavigation(
         drawerContent = {
             ModalDrawerSheet {
                 DrawerContent(
-                    avatarUrl = avatarUrl,
                     onItemSelected = {
                         if (it == AppDestinations.LOGOUT) {
                             viewModel.logout()

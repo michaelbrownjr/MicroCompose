@@ -28,19 +28,19 @@ import com.example.microcompose.ui.AppDestinations
 
 @Composable
 fun DrawerContent(
-    avatarUrl: String?,
+//    avatarUrl: String?,
     onItemSelected: (String) -> Unit
 ) {
     Column(modifier = Modifier.padding(16.dp)) {
         Row {
-            Image(
-                painter = rememberAsyncImagePainter(avatarUrl),
-                contentDescription = "User Avatar",
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-            )
-            // Add Account Button
+//            Image(
+//                painter = rememberAsyncImagePainter(avatarUrl),
+//                contentDescription = "User Avatar",
+//                modifier = Modifier
+//                    .size(40.dp)
+//                    .clip(CircleShape)
+//            )
+//            // Add Account Button
         }
         Spacer(modifier = Modifier.height(16.dp))
         NavigationDrawerItem(
