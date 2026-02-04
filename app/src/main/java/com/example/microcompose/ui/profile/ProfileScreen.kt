@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
@@ -39,7 +40,7 @@ fun ProfileScreen(
     val isRefreshing by vm.isRefreshing.collectAsStateWithLifecycle()
 
     val listState = rememberLazyListState()
-    val clipboardManager = LocalClipboardManager.current
+    val clipboardManager = LocalClipboard.current
 
     // --- Add Snackbar for Errors ---
     val snackbarHostState = remember { SnackbarHostState() }

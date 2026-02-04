@@ -21,6 +21,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.example.microcompose.ui.AppDestinations
+import com.example.microcompose.ui.timeline.TimelineScreen
 import com.example.microcompose.ui.timeline.TimelineViewModel
 import kotlinx.coroutines.launch
 
@@ -97,8 +98,9 @@ fun AdaptiveNavigation(
                 )
             }
         ) {
-            HomeScreen(
-                navController = navController,
+            TimelineScreen(
+                nav = navController,
+                onCompose = { navController.navigate(AppDestinations.COMPOSE) },
                 onMenuClick = {
                     scope.launch {
                         drawerState.open()

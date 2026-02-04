@@ -1,6 +1,6 @@
 package com.example.microcompose.ui.timeline
 
-import android.text.Html
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -20,7 +20,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.outlined.BookmarkBorder
-import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -41,8 +40,11 @@ import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -50,9 +52,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.microcompose.R
+import com.example.microcompose.ui.common.HtmlText
+import com.example.microcompose.ui.common.SHOW_MORE_TAG
+import com.example.microcompose.ui.common.htmlToAnnotatedString
 import com.example.microcompose.ui.model.PostUI
 import com.example.microcompose.ui.model.AuthorUI
 import com.example.microcompose.ui.theme.MicroComposeTheme
+import kotlin.text.append
 
 @Composable
 fun TimelineScreen(
@@ -210,6 +216,38 @@ fun PostItem(
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val isSystem24Hour = android.text.format.DateFormat.is24HourFormat(context)
+// --- TRUNCATION LOGIC START ---
+
+    // 1. Determine the character limit based on the blockquote rule.
+    val hasBlockquote = post.html.take(600).contains("<blockquote>", ignoreCase = true)
+    val characterLimit = if (hasBlockquote) 600 else 300
+
+    // 2. Convert the full HTML to an AnnotatedString to check its length.
+    val fullAnnotatedString = htmlToAnnotatedString(html = post.html)
+
+    // 3. Decide whether to truncate and build the final AnnotatedString.
+    val textToShow = if (fullAnnotatedString.length > characterLimit) {
+        buildAnnotatedString {
+            // Append the truncated text
+            append(fullAnnotatedString.subSequence(0, characterLimit))
+            // Append an ellipsis
+            append("... ")
+            // Append a clickable "Show more" link
+            pushStringAnnotation(tag = SHOW_MORE_TAG, annotation = post.id)
+            withStyle(
+                style = SpanStyle(
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
+                )
+            ) {
+                append("Show more")
+            }
+            pop()
+        }
+    } else {
+        // If not long enough, just show the full text
+        fullAnnotatedString
+    }
 
     Row(
         modifier = modifier
@@ -259,35 +297,20 @@ fun PostItem(
 
             Spacer(modifier = Modifier.height(2.dp))
 
-            val cleanContent = Html.fromHtml(post.html, Html.FROM_HTML_MODE_COMPACT).toString().trim()
-            Text(
-                text = cleanContent,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
-                lineHeight = MaterialTheme.typography.bodyMedium.lineHeight * 1.1f
-            )
-
+            // This is the new structure for the content + bookmark
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
             ) {
-                IconButton(
-                    onClick = { 
-                        val username = post.author.username
-                        onReplyClick(post.id, username)
-                    },
-                    modifier = Modifier.size(24.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.ChatBubbleOutline,
-                        contentDescription = "Reply",
-                        modifier = Modifier.size(18.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                
-                Spacer(modifier = Modifier.width(16.dp))
+                HtmlText(
+                    annotatedString = textToShow, // Pass the raw HTML directly
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        color = MaterialTheme.colorScheme.onSurface
+                    ),
+                    modifier = Modifier.weight(1f),
+                    onShowMoreClicked = onPostClick
+                )
 
                 IconButton(
                     onClick = { /* TODO: Bookmark */ },
