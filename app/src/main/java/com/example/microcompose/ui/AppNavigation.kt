@@ -8,11 +8,17 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.IntOffset
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -21,7 +27,9 @@ import androidx.navigation.navArgument
 import androidx.navigation.navDeepLink
 import com.example.microcompose.ui.compose.ComposeScreen
 import com.example.microcompose.ui.login.LoginScreen
+import com.example.microcompose.ui.main.AuthState
 import com.example.microcompose.ui.main.MainScreen
+import com.example.microcompose.ui.main.MainViewModel
 import com.example.microcompose.ui.postdetail.PostDetailScreen
 import com.example.microcompose.ui.profile.ProfileScreen
 import com.example.microcompose.ui.profile.ProfileViewModel
@@ -31,6 +39,7 @@ import java.nio.charset.StandardCharsets
 
 // Define routes
 object AppDestinations {
+    const val SPLASH = "splash"
     const val LOGIN = "login"
     const val LOGIN_ROUTE = "$LOGIN?token={token}"
     const val MAIN = "main"
@@ -86,7 +95,6 @@ fun createComposeRoute(replyTo: String?, initialContent: String?): String {
 fun AppNavigation(
     modifier: Modifier = Modifier,
     navController: NavHostController,
-    startDestination: String,
     deepLinkToken: String?,
     onDeepLinkTokenConsumed: () -> Unit
 ) {
@@ -97,22 +105,24 @@ fun AppNavigation(
     LaunchedEffect(deepLinkToken) {
         if (deepLinkToken != null) {
             Log.d("AppNavigation", "Deep link token received, navigating: $deepLinkToken")
-            // Navigate to the login screen with the token as an argument
             navController.navigate("${AppDestinations.LOGIN}?token=$deepLinkToken")
-            // Consume the token so this doesn't run again on recomposition
             onDeepLinkTokenConsumed()
         }
     }
 
     NavHost(
         navController = navController,
-        startDestination = startDestination,
+        startDestination = AppDestinations.SPLASH,
         modifier = modifier,
         enterTransition = { slideInHorizontally(initialOffsetX = { it }, animationSpec = animationSpec) + fadeIn(fadeSpec) },
         exitTransition = { slideOutHorizontally(targetOffsetX = { -it / 3 }, animationSpec = animationSpec) + fadeOut(fadeSpec) },
         popEnterTransition = { slideInHorizontally(initialOffsetX = { -it / 3 }, animationSpec = animationSpec) + fadeIn(fadeSpec) },
         popExitTransition = { slideOutHorizontally(targetOffsetX = { it }, animationSpec = animationSpec) + fadeOut(fadeSpec) }
     ) {
+        composable(AppDestinations.SPLASH) {
+            SplashScreen(navController = navController)
+        }
+
         composable(
             route = AppDestinations.LOGIN_ROUTE,
             arguments = listOf(
@@ -122,7 +132,6 @@ fun AppNavigation(
                     defaultValue = null
                 }
             ),
-            // This is now a fallback. Primary handling is in the Activity via LaunchedEffect.
             deepLinks = listOf(
                 navDeepLink {
                     uriPattern = "microcompose://signin/{token}"
@@ -165,5 +174,28 @@ fun AppNavigation(
         ) {
             PostDetailScreen(navController = navController, vm = hiltViewModel())
         }
+    }
+}
+
+@Composable
+fun SplashScreen(navController: NavHostController) {
+    val mainViewModel: MainViewModel = hiltViewModel()
+    val authState by mainViewModel.authState.collectAsStateWithLifecycle()
+
+    LaunchedEffect(authState) {
+        if (authState != AuthState.Unknown) {
+            val route = when (authState) {
+                AuthState.Authenticated -> AppDestinations.MAIN
+                AuthState.Unauthenticated -> AppDestinations.LOGIN_ROUTE
+                AuthState.Unknown -> return@LaunchedEffect
+            }
+            navController.navigate(route) {
+                popUpTo(AppDestinations.SPLASH) { inclusive = true }
+            }
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        CircularProgressIndicator()
     }
 }

@@ -13,7 +13,6 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.rememberNavController
 import com.example.microcompose.ui.AppNavigation
-import com.example.microcompose.ui.AppDestinations
 import com.example.microcompose.ui.theme.MicroComposeTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -38,7 +37,6 @@ class MainActivity : ComponentActivity() {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     AppNavigation(
                         navController = appNavController,
-                        startDestination = AppDestinations.LOGIN_ROUTE,
                         modifier = Modifier.fillMaxSize(),
                         deepLinkToken = token,
                         onDeepLinkTokenConsumed = { _deepLinkToken.value = null } // Consume the token
