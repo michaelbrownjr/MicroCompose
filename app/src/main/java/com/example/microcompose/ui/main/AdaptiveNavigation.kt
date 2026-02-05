@@ -105,7 +105,8 @@ fun AdaptiveNavigation(
                     scope.launch {
                         drawerState.open()
                     }
-                }
+                },
+                viewModel = viewModel
             )
         }
     }

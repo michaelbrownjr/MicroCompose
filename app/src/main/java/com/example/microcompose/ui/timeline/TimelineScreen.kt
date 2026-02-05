@@ -3,10 +3,12 @@ package com.example.microcompose.ui.timeline
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -16,11 +18,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.outlined.BookmarkBorder
-import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
@@ -28,10 +30,14 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,39 +46,42 @@ import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.microcompose.R
-import com.example.microcompose.ui.common.HtmlText
-import com.example.microcompose.ui.common.SHOW_MORE_TAG
-import com.example.microcompose.ui.common.htmlToAnnotatedString
+import com.example.microcompose.ui.common.ProfileMenu
+import com.example.microcompose.ui.common.StructuredPostContent
+import com.example.microcompose.ui.common.parsePostHtml
 import com.example.microcompose.ui.model.PostUI
 import com.example.microcompose.ui.model.AuthorUI
 import com.example.microcompose.ui.theme.MicroComposeTheme
-import kotlin.text.append
+import java.time.Duration
+import java.time.Instant
+import java.time.ZoneId
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
 
 @Composable
 fun TimelineScreen(
     nav: NavController,
     onCompose: () -> Unit,
     onMenuClick: () -> Unit,
-    viewModel: TimelineViewModel = hiltViewModel()
+    viewModel: TimelineViewModel
 ) {
     val posts by viewModel.posts.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
+    val avatarUrl by viewModel.avatarUrl.collectAsStateWithLifecycle(initialValue = null)
+
 
     TimelineContent(
         posts = posts,
         isRefreshing = isRefreshing,
+        avatarUrl = avatarUrl,
         onRefresh = { viewModel.loadTimeline() },
         onCompose = onCompose,
         onMenuClick = onMenuClick,
@@ -95,7 +104,8 @@ fun TimelineScreen(
                     initialContent = "@$username "
                 )
             )
-        }
+        },
+        onLogoutClick = { viewModel.logout() }
     )
 }
 
@@ -109,9 +119,13 @@ private fun TimelineContent(
     onMenuClick: () -> Unit,
     onPostClick: (String) -> Unit,
     onAvatarClick: (String, String?, String?) -> Unit,
-    onReplyClick: (String, String) -> Unit
+    onReplyClick: (String, String) -> Unit,
+    onLogoutClick: () -> Unit,
+    avatarUrl: String?
 ) {
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+    var menuExpanded by remember { mutableStateOf(false) }
+
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -133,13 +147,31 @@ private fun TimelineContent(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { /* TODO: Open Profile */ }) {
-                        Icon(
-                            imageVector = Icons.Outlined.Person,
+                    IconButton(onClick = { menuExpanded = true }) {
+                        AsyncImage(
+                            model = avatarUrl,
                             contentDescription = stringResource(R.string.profile_description),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape),
+                            placeholder = ColorPainter(MaterialTheme.colorScheme.surfaceVariant),
+                            error = ColorPainter(MaterialTheme.colorScheme.surfaceVariant),
+                            contentScale = ContentScale.Crop
                         )
                     }
+
+                    ProfileMenu(
+                        expanded = menuExpanded,
+                        onDismissRequest = { menuExpanded = false },
+                        onSettingsClick = {
+                            menuExpanded = false
+                        },
+
+                        onLogoutClick = {
+                            onLogoutClick()
+                            menuExpanded = false
+                        }
+                    )
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                     containerColor = Color.Transparent,
@@ -169,7 +201,8 @@ private fun TimelineContent(
         ) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = 80.dp)
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(posts) { post ->
                     PostItem(
@@ -188,18 +221,18 @@ private fun TimelineContent(
 
 fun formatRelativeTime(dateString: String, isSystem24Hour: Boolean): String {
     return try {
-        val instant = java.time.Instant.parse(dateString)
-        val zoneId = java.time.ZoneId.systemDefault()
+        val instant = Instant.parse(dateString)
+        val zoneId = ZoneId.systemDefault()
         val zdt = instant.atZone(zoneId)
-        val now = java.time.ZonedDateTime.now(zoneId)
+        val now = ZonedDateTime.now(zoneId)
 
-        val duration = java.time.Duration.between(zdt, now)
-        
+        val duration = Duration.between(zdt, now)
+
         if (duration.toHours() < 24) {
-             val pattern = if (isSystem24Hour) "HH:mm" else "h:mm a"
-             java.time.format.DateTimeFormatter.ofPattern(pattern).format(zdt)
+            val pattern = if (isSystem24Hour) "HH:mm" else "h:mm a"
+            DateTimeFormatter.ofPattern(pattern).format(zdt)
         } else {
-             java.time.format.DateTimeFormatter.ofPattern("M/dd/yyyy").format(zdt)
+            DateTimeFormatter.ofPattern("M/dd/yyyy").format(zdt)
         }
     } catch (e: Exception) {
         dateString.take(10)
@@ -216,111 +249,102 @@ fun PostItem(
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val isSystem24Hour = android.text.format.DateFormat.is24HourFormat(context)
-// --- TRUNCATION LOGIC START ---
 
-    // 1. Determine the character limit based on the blockquote rule.
-    val hasBlockquote = post.html.take(600).contains("<blockquote>", ignoreCase = true)
-    val characterLimit = if (hasBlockquote) 600 else 300
+    // REMOVED old truncation logic to allow for full post rendering with blockquotes.
 
-    // 2. Convert the full HTML to an AnnotatedString to check its length.
-    val fullAnnotatedString = htmlToAnnotatedString(html = post.html)
-
-    // 3. Decide whether to truncate and build the final AnnotatedString.
-    val textToShow = if (fullAnnotatedString.length > characterLimit) {
-        buildAnnotatedString {
-            // Append the truncated text
-            append(fullAnnotatedString.subSequence(0, characterLimit))
-            // Append an ellipsis
-            append("... ")
-            // Append a clickable "Show more" link
-            pushStringAnnotation(tag = SHOW_MORE_TAG, annotation = post.id)
-            withStyle(
-                style = SpanStyle(
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold
-                )
-            ) {
-                append("Show more")
-            }
-            pop()
-        }
-    } else {
-        // If not long enough, just show the full text
-        fullAnnotatedString
-    }
-
-    Row(
+    Surface(
         modifier = modifier
-            .fillMaxWidth()
-            .clickable { onPostClick(post.id) }
-            .padding(vertical = 12.dp, horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp)
+            .fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        onClick = { onPostClick(post.id) }
     ) {
-        AsyncImage(
-            model = post.author.avatar,
-            contentDescription = stringResource(R.string.avatar_description),
-            modifier = Modifier
-                .size(42.dp)
-                .clip(CircleShape)
-                .clickable { onAvatarClick(post.author.username) },
-            contentScale = ContentScale.Crop,
-            placeholder = ColorPainter(Color.Gray),
-            error = ColorPainter(Color.Gray)
-        )
+        Row(
+            modifier = modifier
+                .padding(vertical = 12.dp, horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            AsyncImage(
+                model = post.author.avatar,
+                contentDescription = stringResource(R.string.avatar_description),
+                modifier = Modifier
+                    .size(42.dp)
+                    .clip(CircleShape)
+                    .clickable { onAvatarClick(post.author.username) },
+                contentScale = ContentScale.Crop,
+                placeholder = ColorPainter(Color.Gray),
+                error = ColorPainter(Color.Gray)
+            )
 
-        Column(modifier = Modifier.weight(1f)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                val displayName = if (!post.author.username.isBlank()) {
-                    post.author.username
-                } else {
-                    post.author.name
+            Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val displayName = if (!post.author.username.isBlank()) {
+                        post.author.username
+                    } else {
+                        post.author.name
+                    }
+
+                    Text(
+                        text = displayName,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Text(
+                        text = formatRelativeTime(post.datePublished, isSystem24Hour),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
 
-                Text(
-                    text = displayName,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
-                )
-                Text(
-                    text = formatRelativeTime(post.datePublished, isSystem24Hour),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+                Spacer(modifier = Modifier.height(2.dp))
 
-            Spacer(modifier = Modifier.height(2.dp))
-
-            // This is the new structure for the content + bookmark
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
-            ) {
-                HtmlText(
-                    annotatedString = textToShow, // Pass the raw HTML directly
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        color = MaterialTheme.colorScheme.onSurface
-                    ),
-                    modifier = Modifier.weight(1f),
-                    onShowMoreClicked = onPostClick
-                )
-
-                IconButton(
-                    onClick = { /* TODO: Bookmark */ },
-                    modifier = Modifier.size(24.dp)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Top
                 ) {
-                    Icon(
-                        imageVector = Icons.Outlined.BookmarkBorder,
-                        contentDescription = stringResource(R.string.bookmark_description),
-                        modifier = Modifier.size(20.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    // Use a Box with a weight to ensure the new content renderer
+                    // correctly pushes the bookmark icon to the end.
+                    Box(modifier = Modifier.weight(1f)) {
+                        StructuredPostContent(
+                            html = post.html,
+                            onPostClick = onPostClick
+                        )
+                    }
+
+                    IconButton(
+                        onClick = { /* TODO: Bookmark */ },
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.BookmarkBorder,
+                            contentDescription = stringResource(R.string.bookmark_description),
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                // Image parsing and display logic remains the same.
+                val parsedContent = remember(post.html) { parsePostHtml(post.html) }
+                if (parsedContent.imageUrls.isNotEmpty()){
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    AsyncImage(
+                        model = parsedContent.imageUrls.first(),
+                        contentDescription = "Posted Image",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(16f / 9f)
+                            .clip(RoundedCornerShape(12.dp)),
+                        contentScale = ContentScale.Crop
                     )
                 }
             }
@@ -335,7 +359,11 @@ fun PostItemPreview() {
         PostItem(
             post = PostUI(
                 id = "1",
-                html = "The new Zelda is decently playable on the Steam Deck. Quite impressive! Curious to compare to playing on our OLED Switch. I prefer playing this series emulated, honestly.",
+                html = """
+                    <p>This is a regular paragraph.</p>
+                    <blockquote>This is a blockquote. It should be indented with a vertical bar.</blockquote>
+                    <p>This is another regular paragraph.</p>
+                """.trimIndent(),
                 datePublished = "2025-01-30T12:30:00Z",
                 url = "https://example.com/1",
                 author = AuthorUI(
@@ -344,48 +372,6 @@ fun PostItemPreview() {
                     avatar = ""
                 )
             )
-        )
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun TimelineScreenPreview() {
-    val samplePosts = listOf(
-        PostUI(
-            id = "1",
-            html = "Hello Micro.blog from Jetpack Compose!",
-            datePublished = "2025-01-30T12:30:00Z",
-            url = "https://example.com/1",
-            author = AuthorUI(
-                name = "Sean",
-                username = "sean@mastodon.social",
-                avatar = ""
-            )
-        ),
-        PostUI(
-            id = "2",
-            html = "This is another post in the timeline.",
-            datePublished = "2025-01-30T10:00:00Z",
-            url = "https://example.com/2",
-            author = AuthorUI(
-                name = "Manton",
-                username = "manton",
-                avatar = ""
-            )
-        )
-    )
-
-    MicroComposeTheme {
-        TimelineContent(
-            posts = samplePosts,
-            isRefreshing = false,
-            onRefresh = {},
-            onCompose = {},
-            onMenuClick = {},
-            onPostClick = {},
-            onAvatarClick = { _, _, _ -> },
-            onReplyClick = { _, _ -> }
         )
     }
 }

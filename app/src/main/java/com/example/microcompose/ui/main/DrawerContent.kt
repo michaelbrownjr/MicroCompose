@@ -85,11 +85,5 @@ fun DrawerContent(
             selected = false,
             onClick = { onItemSelected("add_account") }
         )
-        NavigationDrawerItem(
-            icon = { Icon(Icons.Filled.Logout, contentDescription = "Logout") },
-            label = { Text("Logout") },
-            selected = false,
-            onClick = { onItemSelected(AppDestinations.LOGOUT) }
-        )
     }
 }
